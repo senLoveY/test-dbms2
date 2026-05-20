@@ -15,8 +15,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  ensure-pages-workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure Pages uses GitHub Actions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.request("PUT /repos/{owner}/{repo}/pages", {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                build_type: "workflow"
+              });
+              core.info("Pages build_type set to workflow");
+            } catch (error) {
+              core.warning(`Unable to set Pages build_type automatically: ${error.message}`);
+            }
+
   build:
     runs-on: ubuntu-latest
+    needs: ensure-pages-workflow
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,6 +51,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
