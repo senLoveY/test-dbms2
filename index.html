@@ -4,28 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Тест по MS SQL Server</title>
-    <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <main class="container">
-      <header class="page-header">
-        <h1>Тест по MS SQL Server</h1>
-        <p>
-          20 вопросов из файла <code>ответы.pdf</code>. Для вопросов с несколькими
-          правильными вариантами используйте чекбоксы.
-        </p>
-      </header>
-
-      <section class="toolbar">
-        <button id="submit-btn" type="button">Завершить попытку</button>
-        <button id="reset-btn" type="button" class="secondary">Сбросить</button>
-      </section>
-
-      <form id="quiz-form" class="quiz-form"></form>
-
-      <section id="result" class="result hidden" aria-live="polite"></section>
-    </main>
-
-    <script src="./script.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
