@@ -1,24 +1,6 @@
 import { useMemo, useState } from "react";
 import { questions } from "./questions";
 
-function readAttempts() {
-  try {
-    if (typeof window === "undefined") return 0;
-    return Number(window.localStorage.getItem("quizAttempts") || 0);
-  } catch {
-    return 0;
-  }
-}
-
-function writeAttempts(value) {
-  try {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("quizAttempts", String(value));
-  } catch {
-    // ignore storage write errors to avoid app crash
-  }
-}
-
 function arraysEqualAsSet(a, b) {
   if (a.length !== b.length) return false;
   const setA = new Set(a);
@@ -45,7 +27,9 @@ export default function App() {
   const [finished, setFinished] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [attempts, setAttempts] = useState(readAttempts);
+  const [attempts, setAttempts] = useState(
+    Number(localStorage.getItem("quizAttempts") || 0)
+  );
 
   const currentQuestion = questions[currentIndex];
   const selected = answers[currentQuestion?.id] || [];
@@ -85,7 +69,7 @@ export default function App() {
     if (!selected.length) return;
     if (isLastQuestion) {
       const nextAttempts = attempts + 1;
-      writeAttempts(nextAttempts);
+      localStorage.setItem("quizAttempts", String(nextAttempts));
       setAttempts(nextAttempts);
       setFinished(true);
       return;
@@ -196,6 +180,7 @@ export default function App() {
               <label
                 key={option}
                 className={checked ? "option active" : "option"}
+                onClick={() => handleOptionToggle(idx)}
               >
                 <input
                   type={currentQuestion.type === "multiple" ? "checkbox" : "radio"}
@@ -203,8 +188,7 @@ export default function App() {
                   checked={checked}
                   onChange={() => handleOptionToggle(idx)}
                 />
-                <span className="option-key">{String.fromCharCode(65 + idx)}</span>
-                <span className="option-text">{option}</span>
+                <span>{option}</span>
               </label>
             );
           })}
