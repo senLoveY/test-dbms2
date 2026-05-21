@@ -25,6 +25,13 @@ body {
   border-radius: 18px;
   box-shadow: 0 22px 50px rgba(2, 6, 23, 0.5);
   padding: 22px;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(125, 211, 252, 0.5);
+  box-shadow: 0 28px 62px rgba(2, 132, 199, 0.3);
 }
 
 .intro {
@@ -41,6 +48,12 @@ body {
   color: #7dd3fc;
   font-weight: 600;
   font-size: 13px;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.chip:hover {
+  transform: translateY(-1px) scale(1.03);
+  background: rgba(56, 189, 248, 0.3);
 }
 
 h1,
@@ -87,6 +100,7 @@ p {
 .progress-bar {
   height: 100%;
   background: linear-gradient(90deg, #38bdf8, #22d3ee);
+  transition: width 0.4s ease;
 }
 
 .type-tip {
@@ -122,6 +136,14 @@ p {
   padding: 12px;
   cursor: pointer;
   background: rgba(30, 41, 59, 0.5);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.option:hover {
+  transform: translateY(-1px);
+  border-color: rgba(125, 211, 252, 0.6);
+  box-shadow: 0 8px 18px rgba(2, 132, 199, 0.2);
 }
 
 .option.active {
@@ -161,6 +183,7 @@ button {
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
 }
 
 button:disabled {
@@ -168,9 +191,19 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0);
+}
+
 .primary-btn {
   color: #082f49;
   background: linear-gradient(135deg, #67e8f9, #22d3ee);
+  box-shadow: 0 8px 20px rgba(34, 211, 238, 0.28);
 }
 
 .ghost-btn {
@@ -183,6 +216,7 @@ button:disabled {
   color: #cffafe;
   border: 1px solid rgba(34, 211, 238, 0.5);
   background: rgba(8, 47, 73, 0.7);
+  box-shadow: 0 8px 18px rgba(8, 47, 73, 0.35);
 }
 
 .summary {
@@ -215,6 +249,13 @@ button:disabled {
   border-radius: 14px;
   padding: 12px;
   background: rgba(15, 23, 42, 0.7);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.review-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(125, 211, 252, 0.5);
+  box-shadow: 0 10px 24px rgba(14, 116, 144, 0.22);
 }
 
 .review-header {
@@ -235,6 +276,11 @@ button:disabled {
   font-weight: 700;
   border-radius: 999px;
   padding: 4px 10px;
+  transition: transform 0.2s ease;
+}
+
+.badge:hover {
+  transform: scale(1.04);
 }
 
 .badge.right {
