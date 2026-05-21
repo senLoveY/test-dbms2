@@ -14,7 +14,7 @@
 
 1. Создайте проект на [supabase.com](https://supabase.com).
 2. В **SQL Editor** выполните скрипт [`supabase/schema.sql`](supabase/schema.sql).
-3. В **Database → Replication** включите таблицы `rooms` и `room_players` для Realtime.
+3. Realtime: выполните нижнюю часть `schema.sql` (publication + replica identity) **или** в Dashboard: **Database → Publications → supabase_realtime** — добавьте `rooms` и `room_players`.
 4. Скопируйте URL, `anon key` и `service_role key`.
 
 ### 2. Переменные окружения
@@ -29,6 +29,8 @@ cp .env.example .env
 
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — для фронтенда
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — для API на Vercel
+
+**Важно:** URL — только корень проекта (`https://xxx.supabase.co`), **без** `/rest/v1/`.
 
 ### 3. Локально
 

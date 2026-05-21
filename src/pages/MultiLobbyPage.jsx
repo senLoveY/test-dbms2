@@ -9,7 +9,7 @@ export default function MultiLobbyPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const roomId = loadRoomSession(code);
-  const { state, error, loading } = useRoomState(roomId);
+  const { state, error, loading, refresh } = useRoomState(roomId);
 
   const isHost = state?.room?.host_id === user?.id;
   const players = state?.players || [];
@@ -28,6 +28,7 @@ export default function MultiLobbyPage() {
       method: "POST",
       body: { roomId },
     });
+    await refresh();
   }
 
   if (!roomId) {
