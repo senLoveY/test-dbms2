@@ -113,21 +113,6 @@ export default function HomePage() {
         ))}
       </section>
 
-      <section className="home-stats card">
-        <div className="home-stat">
-          <span className="home-stat-value">20</span>
-          <span className="home-stat-label">вопросов в базе</span>
-        </div>
-        <div className="home-stat">
-          <span className="home-stat-value">2</span>
-          <span className="home-stat-label">игрока в дуэли</span>
-        </div>
-        <div className="home-stat">
-          <span className="home-stat-value">∞</span>
-          <span className="home-stat-label">попыток в соло</span>
-        </div>
-      </section>
-
       {user && (
         <footer className="home-footer">
           <Button variant="danger" onClick={signOut}>
