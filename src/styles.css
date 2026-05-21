@@ -796,6 +796,17 @@ a.btn-danger:focus-visible {
   background: #fca5a5;
 }
 
+.badge.partial {
+  color: #78350f;
+  background: #fcd34d;
+}
+
+.live-result.partial {
+  color: var(--warning);
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
 .review-options {
   margin: 10px 0 0;
   padding-left: 20px;
