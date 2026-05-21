@@ -92,59 +92,65 @@ export default function MultiLobbyPage() {
   }
 
   return (
-    <PageLayout className="intro">
-      <p className="chip">Лобби</p>
-      <h1>Ожидание игроков</h1>
-      <p className="subtitle">Код комнаты:</p>
-      <p className="code-display">{code}</p>
+    <PageLayout className="lobby-page" wide centered={false}>
+      <header className="lobby-header">
+        <p className="chip">Лобби</p>
+        <h1>Ожидание игроков</h1>
+        <p className="subtitle">Код комнаты:</p>
+        <p className="code-display">{code}</p>
+      </header>
 
       {loading && <p className="muted">Загрузка...</p>}
       {error && <p className="live-result wrong">{error}</p>}
       {settingsError && <p className="live-result wrong">{settingsError}</p>}
 
-      <section className="card settings-card">
-        <h2>Настройки матча</h2>
-        {isHost ? (
-          <>
-            <RoomSettingsForm
-              settings={localSettings || DEFAULT_ROOM_SETTINGS}
-              onChange={setLocalSettings}
-              onPreset={(preset) => {
-                const { label, ...rest } = preset;
-                setLocalSettings({ ...DEFAULT_ROOM_SETTINGS, ...rest });
-              }}
-              showPresets
-            />
-            <Button
-              variant="secondary"
-              block
-              onClick={handleSaveSettings}
-              disabled={savingSettings}
-            >
-              {savingSettings ? "Сохранение..." : "Сохранить настройки"}
-            </Button>
-          </>
-        ) : (
-          <RoomSettingsSummary settings={displaySettings} />
-        )}
-      </section>
+      <div className="lobby-grid">
+        <section className="lobby-panel lobby-players">
+          <h2>Участники</h2>
+          <ul className="player-list">
+            {players.map((player) => (
+              <li className="player-card" key={player.user_id}>
+                <strong>{player.username}</strong>
+                <span>
+                  {state?.room?.host_id === player.user_id && (
+                    <span className="host-badge">Хост</span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="muted lobby-players-count">Игроков: {players.length} / 2</p>
+        </section>
 
-      <ul className="player-list">
-        {players.map((player) => (
-          <li className="player-card" key={player.user_id}>
-            <strong>{player.username}</strong>
-            <span>
-              {state?.room?.host_id === player.user_id && (
-                <span className="host-badge">Хост</span>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
+        <section className="lobby-panel settings-card">
+          <h2>Настройки матча</h2>
+          {isHost ? (
+            <>
+              <RoomSettingsForm
+                settings={localSettings || DEFAULT_ROOM_SETTINGS}
+                onChange={setLocalSettings}
+                onPreset={(preset) => {
+                  const { label, ...rest } = preset;
+                  setLocalSettings({ ...DEFAULT_ROOM_SETTINGS, ...rest });
+                }}
+                showPresets
+              />
+              <Button
+                variant="secondary"
+                block
+                onClick={handleSaveSettings}
+                disabled={savingSettings}
+              >
+                {savingSettings ? "Сохранение..." : "Сохранить настройки"}
+              </Button>
+            </>
+          ) : (
+            <RoomSettingsSummary settings={displaySettings} />
+          )}
+        </section>
+      </div>
 
-      <p className="muted">Игроков: {players.length} / 2</p>
-
-      <div className="stack stack-center">
+      <div className="stack lobby-actions">
         {isHost && (
           <Button
             variant="primary"
