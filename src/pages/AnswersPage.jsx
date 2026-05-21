@@ -1,17 +1,23 @@
-import { Link } from "react-router-dom";
+import Button from "../components/Button.jsx";
 import { questions as sourceQuestions } from "../questions.js";
 
 export default function AnswersPage() {
   return (
-    <main className="app">
-      <section className="card answers-page-header">
+    <main className="app app-wide">
+      <section className="card page-centered">
+        <p className="chip">Справочник</p>
         <h1>Правильные ответы</h1>
         <p className="subtitle">
-          Полный список вопросов с правильными вариантами ответов.
+          Полный список вопросов с верными вариантами.
         </p>
-        <Link className="primary-btn" to="/">
-          На главную
-        </Link>
+        <div className="stack stack-center">
+          <Button variant="primary" to="/" block>
+            На главную
+          </Button>
+          <Button variant="secondary" to="/solo" block>
+            Соло-тест
+          </Button>
+        </div>
       </section>
 
       <section className="card review">
@@ -22,6 +28,7 @@ export default function AnswersPage() {
                 <h3>
                   {question.id}. {question.text}
                 </h3>
+                <span className="badge right">Верно</span>
               </div>
 
               <ul className="review-options">

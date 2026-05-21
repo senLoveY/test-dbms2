@@ -37,3 +37,7 @@ export function saveRoomSession(code, roomId) {
 export function loadRoomSession(code) {
   return sessionStorage.getItem(`room:${code}`);
 }
+
+export function clearRoomSession(code) {
+  sessionStorage.removeItem(`room:${code}`);
+}

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Button from "../components/Button.jsx";
+import PageLayout from "../components/PageLayout.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 
 export default function LoginPage() {
@@ -25,40 +27,41 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="app">
-      <section className="card intro">
-        <h1>Вход</h1>
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <label>
-            Email
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </label>
-          <label>
-            Пароль
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </label>
-          {error && <p className="live-result wrong">{error}</p>}
-          <button className="primary-btn intro-action-btn" type="submit" disabled={loading}>
-            {loading ? "Вход..." : "Войти"}
-          </button>
-        </form>
-        <p className="attempts">
-          Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
-        </p>
-        <Link className="ghost-btn intro-action-btn" to="/">
+    <PageLayout className="intro">
+      <h1>Вход</h1>
+      <p className="subtitle">Войдите, чтобы играть в дуэль с другом.</p>
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <label>
+          Email
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </label>
+        <label>
+          Пароль
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </label>
+        {error && <p className="live-result wrong">{error}</p>}
+        <Button variant="primary" type="submit" block disabled={loading}>
+          {loading ? "Вход..." : "Войти"}
+        </Button>
+      </form>
+      <p className="muted">
+        Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+      </p>
+      <div className="stack stack-center">
+        <Button variant="secondary" to="/" block>
           На главную
-        </Link>
-      </section>
-    </main>
+        </Button>
+      </div>
+    </PageLayout>
   );
 }

@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import Button from "../components/Button.jsx";
+import PageLayout from "../components/PageLayout.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { apiRequest, saveRoomSession } from "../lib/api.js";
 
@@ -11,14 +13,12 @@ export default function MultiCreatePage() {
 
   if (!user) {
     return (
-      <main className="app">
-        <section className="card intro">
-          <p className="subtitle">Войдите, чтобы создать комнату.</p>
-          <Link className="primary-btn intro-action-btn" to="/login">
-            Войти
-          </Link>
-        </section>
-      </main>
+      <PageLayout className="intro">
+        <p className="subtitle">Войдите, чтобы создать комнату.</p>
+        <Button variant="primary" to="/login" block>
+          Войти
+        </Button>
+      </PageLayout>
     );
   }
 
@@ -37,25 +37,18 @@ export default function MultiCreatePage() {
   }
 
   return (
-    <main className="app">
-      <section className="card intro">
-        <h1>Создать комнату</h1>
-        <p className="subtitle">Дуэль на 2 игроков. Поделитесь кодом с другом.</p>
-        {error && <p className="live-result wrong">{error}</p>}
-        <div className="intro-actions">
-          <button
-            className="primary-btn intro-action-btn"
-            type="button"
-            onClick={handleCreate}
-            disabled={loading}
-          >
-            {loading ? "Создание..." : "Создать комнату"}
-          </button>
-          <Link className="ghost-btn intro-action-btn" to="/">
-            Назад
-          </Link>
-        </div>
-      </section>
-    </main>
+    <PageLayout className="intro">
+      <h1>Создать комнату</h1>
+      <p className="subtitle">Дуэль на 2 игроков. Поделитесь кодом с другом.</p>
+      {error && <p className="live-result wrong">{error}</p>}
+      <div className="stack stack-center">
+        <Button variant="primary" block onClick={handleCreate} disabled={loading}>
+          {loading ? "Создание..." : "Создать комнату"}
+        </Button>
+        <Button variant="secondary" to="/" block>
+          Назад
+        </Button>
+      </div>
+    </PageLayout>
   );
 }

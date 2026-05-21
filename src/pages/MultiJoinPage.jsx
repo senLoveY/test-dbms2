@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import Button from "../components/Button.jsx";
+import PageLayout from "../components/PageLayout.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { apiRequest, saveRoomSession } from "../lib/api.js";
 
@@ -12,14 +14,12 @@ export default function MultiJoinPage() {
 
   if (!user) {
     return (
-      <main className="app">
-        <section className="card intro">
-          <p className="subtitle">Войдите, чтобы войти в комнату.</p>
-          <Link className="primary-btn intro-action-btn" to="/login">
-            Войти
-          </Link>
-        </section>
-      </main>
+      <PageLayout className="intro">
+        <p className="subtitle">Войдите, чтобы войти в комнату.</p>
+        <Button variant="primary" to="/login" block>
+          Войти
+        </Button>
+      </PageLayout>
     );
   }
 
@@ -42,29 +42,29 @@ export default function MultiJoinPage() {
   }
 
   return (
-    <main className="app">
-      <section className="card intro">
-        <h1>Войти в комнату</h1>
-        <form className="auth-form" onSubmit={handleJoin}>
-          <label>
-            Код комнаты
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="ABC123"
-              required
-              maxLength={6}
-            />
-          </label>
-          {error && <p className="live-result wrong">{error}</p>}
-          <button className="primary-btn intro-action-btn" type="submit" disabled={loading}>
-            {loading ? "Подключение..." : "Войти"}
-          </button>
-        </form>
-        <Link className="ghost-btn intro-action-btn" to="/">
+    <PageLayout className="intro">
+      <h1>Войти в комнату</h1>
+      <form className="auth-form" onSubmit={handleJoin}>
+        <label>
+          Код комнаты
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            placeholder="ABC123"
+            required
+            maxLength={6}
+          />
+        </label>
+        {error && <p className="live-result wrong">{error}</p>}
+        <Button variant="primary" type="submit" block disabled={loading}>
+          {loading ? "Подключение..." : "Войти в комнату"}
+        </Button>
+      </form>
+      <div className="stack stack-center">
+        <Button variant="secondary" to="/" block>
           Назад
-        </Link>
-      </section>
-    </main>
+        </Button>
+      </div>
+    </PageLayout>
   );
 }

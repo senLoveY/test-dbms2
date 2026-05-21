@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Button from "../components/Button.jsx";
+import PageLayout from "../components/PageLayout.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 
 export default function RegisterPage() {
@@ -26,49 +28,50 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="app">
-      <section className="card intro">
-        <h1>Регистрация</h1>
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <label>
-            Никнейм
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-            />
-          </label>
-          <label>
-            Email
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </label>
-          <label>
-            Пароль
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-            />
-          </label>
-          {error && <p className="live-result wrong">{error}</p>}
-          <button className="primary-btn intro-action-btn" type="submit" disabled={loading}>
-            {loading ? "Создание..." : "Создать аккаунт"}
-          </button>
-        </form>
-        <p className="attempts">
-          Уже есть аккаунт? <Link to="/login">Войти</Link>
-        </p>
-        <Link className="ghost-btn intro-action-btn" to="/">
+    <PageLayout className="intro">
+      <h1>Регистрация</h1>
+      <p className="subtitle">Создайте аккаунт для мультиплеера.</p>
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <label>
+          Никнейм
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
+        </label>
+        <label>
+          Email
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </label>
+        <label>
+          Пароль
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+          />
+        </label>
+        {error && <p className="live-result wrong">{error}</p>}
+        <Button variant="primary" type="submit" block disabled={loading}>
+          {loading ? "Создание..." : "Создать аккаунт"}
+        </Button>
+      </form>
+      <p className="muted">
+        Уже есть аккаунт? <Link to="/login">Войти</Link>
+      </p>
+      <div className="stack stack-center">
+        <Button variant="secondary" to="/" block>
           На главную
-        </Link>
-      </section>
-    </main>
+        </Button>
+      </div>
+    </PageLayout>
   );
 }
