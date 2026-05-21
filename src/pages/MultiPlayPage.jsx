@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
 import PageLayout from "../components/PageLayout.jsx";
 import PlayerAnswers from "../components/PlayerAnswers.jsx";
+import VictoryScreen from "../components/VictoryScreen.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import {
   apiRequest,
@@ -159,46 +160,30 @@ export default function MultiPlayPage() {
   }
 
   if (room?.status === "finished") {
-    const winner = sortedPlayers[0];
     const soloFinish = sortedPlayers.length <= 1;
+    const youWon =
+      sortedPlayers[0]?.user_id === user?.id &&
+      !soloFinish &&
+      sortedPlayers.length >= 2;
 
     return (
-      <PageLayout className="summary">
-        <p className="chip">Финиш</p>
-        <h1>Игра окончена</h1>
-        {soloFinish && (
-          <p className="subtitle">Противник вышел или игра завершена досрочно.</p>
-        )}
-        {winner && (
-          <p className="subtitle">
-            {soloFinish ? "Ваш счёт" : "Лидер"}: <b>{winner.username}</b> — {winner.score}{" "}
-            очков
-          </p>
-        )}
-        <ul className="player-list">
-          {sortedPlayers.map((player) => (
-            <li className="player-card" key={player.user_id}>
-              <strong>{player.username}</strong>
-              <span className="muted">
-                {player.score} очков
-                {player.last_points > 0 ? ` (+${player.last_points})` : ""}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <div className="stack stack-center">
-          <Button
-            variant="primary"
-            block
-            onClick={() => {
-              clearRoomSession(code);
-              navigate("/");
-            }}
-          >
-            На главную
-          </Button>
-        </div>
-      </PageLayout>
+      <VictoryScreen
+        title={youWon ? "Победа!" : "Игра окончена"}
+        subtitle={
+          soloFinish
+            ? "Противник вышел или игра завершена досрочно."
+            : youWon
+              ? "Вы набрали больше всех очков."
+              : "В следующий раз повезёт больше!"
+        }
+        players={sortedPlayers}
+        currentUserId={user?.id}
+        soloFinish={soloFinish}
+        onHome={() => {
+          clearRoomSession(code);
+          navigate("/");
+        }}
+      />
     );
   }
 
