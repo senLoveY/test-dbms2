@@ -182,7 +182,7 @@ export const questions = [
   },
   {
     id: 15,
-    type: "multiple",
+    type: "single",
     text: "Выберите варианты с правильной строкой соединения при использовании утилиты SQLCMD.",
     options: [
       "sqlcmd -S",
@@ -191,7 +191,7 @@ export const questions = [
       "sqlcmd -S ComputerA1691",
       "sqlcmd -S tcp:ComputerA1433",
     ],
-    correct: [0, 1, 2, 3, 4],
+    correct: [1],
   },
   {
     id: 16,
