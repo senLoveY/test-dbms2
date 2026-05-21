@@ -36,7 +36,7 @@ export default function HomePage() {
           <Button variant="secondary" to="/multi/join" block>
             Войти по коду
           </Button>
-          <Button variant="secondary" block onClick={signOut}>
+          <Button variant="danger" block onClick={signOut}>
             Выйти ({profile?.username || user.email})
           </Button>
         </div>

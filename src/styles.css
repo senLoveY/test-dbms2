@@ -240,18 +240,20 @@ a.btn-accent:focus-visible {
 }
 
 .btn-danger {
-  color: #fecdd3;
-  border-color: rgba(251, 113, 133, 0.45);
-  background: var(--danger-bg);
+  color: #fff1f2;
+  border-color: rgba(244, 63, 94, 0.55);
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 55%, #be123c 100%);
+  box-shadow: 0 10px 22px rgba(225, 29, 72, 0.28);
 }
 
 .btn-danger:not(:disabled):hover,
 .btn-danger:not(:disabled):focus-visible,
 a.btn-danger:hover,
 a.btn-danger:focus-visible {
-  color: #ffe4e6;
-  border-color: rgba(251, 113, 133, 0.7);
-  background: rgba(251, 113, 133, 0.2);
+  color: #fff1f2;
+  border-color: rgba(253, 164, 175, 0.8);
+  background: linear-gradient(135deg, #fb7185 0%, #f43f5e 55%, #e11d48 100%);
+  box-shadow: 0 14px 28px rgba(225, 29, 72, 0.38);
 }
 
 .intro-actions .btn,
