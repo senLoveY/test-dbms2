@@ -1,8 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
 import PageLayout from "../components/PageLayout.jsx";
+import RoomSettingsForm, {
+  DEFAULT_ROOM_SETTINGS,
+} from "../components/RoomSettingsForm.jsx";
+import RoomSettingsSummary from "../components/RoomSettingsSummary.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
+import { normalizeRoomSettings } from "../../lib/roomSettings.js";
 import { apiRequest, clearRoomSession, loadRoomSession } from "../lib/api.js";
 import { useRoomState } from "../hooks/useRoomState.js";
 
@@ -15,6 +20,17 @@ export default function MultiLobbyPage() {
 
   const isHost = state?.room?.host_id === user?.id;
   const players = state?.players || [];
+  const [localSettings, setLocalSettings] = useState(null);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
+
+  const displaySettings = state?.settings || localSettings || DEFAULT_ROOM_SETTINGS;
+
+  useEffect(() => {
+    if (state?.settings) {
+      setLocalSettings(state.settings);
+    }
+  }, [state?.settings]);
 
   useEffect(() => {
     if (state?.room?.status === "playing" || state?.room?.status === "revealing") {
@@ -24,6 +40,23 @@ export default function MultiLobbyPage() {
       navigate(`/multi/play/${code}`);
     }
   }, [state?.room?.status, code, navigate]);
+
+  async function handleSaveSettings() {
+    if (!localSettings) return;
+    setSavingSettings(true);
+    setSettingsError("");
+    try {
+      await apiRequest("/api/rooms/settings", {
+        method: "POST",
+        body: { roomId, settings: normalizeRoomSettings(localSettings) },
+      });
+      await refresh();
+    } catch (err) {
+      setSettingsError(err.message);
+    } finally {
+      setSavingSettings(false);
+    }
+  }
 
   async function handleStart() {
     await apiRequest("/api/game/start", {
@@ -62,11 +95,39 @@ export default function MultiLobbyPage() {
     <PageLayout className="intro">
       <p className="chip">Лобби</p>
       <h1>Ожидание игроков</h1>
-      <p className="subtitle">Передайте код другу:</p>
+      <p className="subtitle">Код комнаты:</p>
       <p className="code-display">{code}</p>
 
       {loading && <p className="muted">Загрузка...</p>}
       {error && <p className="live-result wrong">{error}</p>}
+      {settingsError && <p className="live-result wrong">{settingsError}</p>}
+
+      <section className="card settings-card">
+        <h2>Настройки матча</h2>
+        {isHost ? (
+          <>
+            <RoomSettingsForm
+              settings={localSettings || DEFAULT_ROOM_SETTINGS}
+              onChange={setLocalSettings}
+              onPreset={(preset) => {
+                const { label, ...rest } = preset;
+                setLocalSettings({ ...DEFAULT_ROOM_SETTINGS, ...rest });
+              }}
+              showPresets
+            />
+            <Button
+              variant="secondary"
+              block
+              onClick={handleSaveSettings}
+              disabled={savingSettings}
+            >
+              {savingSettings ? "Сохранение..." : "Сохранить настройки"}
+            </Button>
+          </>
+        ) : (
+          <RoomSettingsSummary settings={displaySettings} />
+        )}
+      </section>
 
       <ul className="player-list">
         {players.map((player) => (
@@ -75,9 +136,6 @@ export default function MultiLobbyPage() {
             <span>
               {state?.room?.host_id === player.user_id && (
                 <span className="host-badge">Хост</span>
-              )}
-              {state?.room?.host_id !== player.user_id && (
-                <span className="muted">{player.score} очков</span>
               )}
             </span>
           </li>

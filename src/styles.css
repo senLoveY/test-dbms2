@@ -741,6 +741,116 @@ a.btn-danger:focus-visible {
   animation: fade-up 0.6s ease 0.7s both;
 }
 
+/* ——— Room settings ——— */
+
+.room-settings {
+  margin-top: 16px;
+  text-align: left;
+}
+
+.settings-card {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.settings-card h2 {
+  margin-bottom: 12px;
+  font-size: 1rem;
+  color: var(--text-soft);
+}
+
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+  justify-content: center;
+}
+
+.preset-chip {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding: 8px 14px;
+  background: rgba(34, 211, 238, 0.1);
+  color: var(--accent-2);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
+}
+
+.preset-chip:hover:not(:disabled) {
+  background: rgba(34, 211, 238, 0.2);
+  transform: translateY(-1px);
+}
+
+.preset-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.setting-row {
+  display: grid;
+  gap: 6px;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.setting-row select {
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  background: rgba(15, 23, 42, 0.8);
+  color: var(--text);
+  font-family: var(--font);
+}
+
+.setting-toggle {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.setting-toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+
+.setting-hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.settings-summary {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+  text-align: left;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.room-settings-disabled {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
 .review {
   margin-top: 16px;
 }

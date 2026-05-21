@@ -14,6 +14,15 @@ create table if not exists public.rooms (
   question_ids jsonb not null default '[]'::jsonb,
   current_index int not null default 0,
   time_limit_sec int not null default 30,
+  question_count int not null default 20,
+  reveal_pause_ms int not null default 3500,
+  settings jsonb not null default '{
+    "shuffleOptions": true,
+    "autoSubmitOnTimeout": true,
+    "partialCredit": true,
+    "minTimeFactor": 0.6,
+    "maxPointsPerQuestion": 1000
+  }'::jsonb,
   question_started_at timestamptz,
   question_deadline_at timestamptz,
   created_at timestamptz not null default now()
