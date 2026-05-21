@@ -214,18 +214,20 @@ export default function App() {
             20 вопросов, прохождение по одному вопросу. После завершения откроется
             полный разбор с правильными ответами.
           </p>
-          <button
-            className="primary-btn"
-            onClick={() => {
-              setQuestions(prepareQuestionsSet());
-              setStarted(true);
-            }}
-          >
-            Начать тест
-          </button>
-          <button className="ghost-btn" onClick={() => navigateTo("answers")}>
-            Смотреть правильные ответы
-          </button>
+          <div className="intro-actions">
+            <button
+              className="primary-btn"
+              onClick={() => {
+                setQuestions(prepareQuestionsSet());
+                setStarted(true);
+              }}
+            >
+              Начать тест
+            </button>
+            <button className="ghost-btn" onClick={() => navigateTo("answers")}>
+              Смотреть правильные ответы
+            </button>
+          </div>
           <p className="attempts">Завершенных попыток: {attempts}</p>
         </section>
       </main>
