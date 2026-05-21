@@ -61,22 +61,25 @@ export default function App() {
   const [finished, setFinished] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+  const [checkedMap, setCheckedMap] = useState({});
   const [attempts, setAttempts] = useState(
     Number(localStorage.getItem("quizAttempts") || 0)
   );
 
   const currentQuestion = questions[currentIndex];
+  const currentQuestionId = currentQuestion?.id;
   const selected = answers[currentQuestion?.id] || [];
+  const currentChecked = Boolean(checkedMap[currentQuestionId]);
   const currentAnswerStates = currentQuestion
     ? getAnswerState(currentQuestion, selected)
     : [];
   const currentIsCorrect =
-    currentQuestion && selected.length > 0
+    currentQuestion && currentChecked
       ? isQuestionCorrect(currentQuestion, selected)
       : null;
   const answeredCount = useMemo(
-    () => Object.values(answers).filter((value) => value.length > 0).length,
-    [answers]
+    () => Object.values(checkedMap).filter(Boolean).length,
+    [checkedMap]
   );
 
   const score = useMemo(() => {
@@ -90,6 +93,7 @@ export default function App() {
   const isLastQuestion = currentIndex === questions.length - 1;
 
   function handleOptionToggle(optionIndex) {
+    setCheckedMap((prev) => ({ ...prev, [currentQuestion.id]: false }));
     setAnswers((prev) => {
       const previous = prev[currentQuestion.id] || [];
 
@@ -106,8 +110,13 @@ export default function App() {
     });
   }
 
-  function handleNext() {
+  function handleCheckAnswer() {
     if (!selected.length) return;
+    setCheckedMap((prev) => ({ ...prev, [currentQuestion.id]: true }));
+  }
+
+  function handleNext() {
+    if (!selected.length || !currentChecked) return;
     if (isLastQuestion) {
       const nextAttempts = attempts + 1;
       localStorage.setItem("quizAttempts", String(nextAttempts));
@@ -123,6 +132,7 @@ export default function App() {
     setFinished(false);
     setCurrentIndex(0);
     setAnswers({});
+    setCheckedMap({});
     setQuestions(prepareQuestionsSet());
   }
 
@@ -233,7 +243,7 @@ export default function App() {
           {currentQuestion.options.map((option, idx) => {
             const checked = selected.includes(idx);
             const answerState =
-              selected.length > 0 ? `state-${currentAnswerStates[idx]}` : "";
+              currentChecked ? `state-${currentAnswerStates[idx]}` : "";
             return (
               <label
                 key={`${currentQuestion.id}-${idx}-${option.text.slice(0, 16)}`}
@@ -260,7 +270,18 @@ export default function App() {
           >
             Назад
           </button>
-          <button className="primary-btn" onClick={handleNext} disabled={!selected.length}>
+          <button
+            className="check-btn"
+            onClick={handleCheckAnswer}
+            disabled={!selected.length || currentChecked}
+          >
+            Ответить
+          </button>
+          <button
+            className="primary-btn"
+            onClick={handleNext}
+            disabled={!selected.length || !currentChecked}
+          >
             {isLastQuestion ? "Завершить тест" : "Следующий вопрос"}
           </button>
         </div>
