@@ -139,9 +139,9 @@ export default function SoloQuizPage() {
   if (finished) {
     return (
       <main className="app">
-        <section className="card summary page-centered">
-          <p className="chip">Результат</p>
-          <h1>Тест завершён</h1>
+        <section className="card summary page-centered victory-screen">
+          <p className="chip victory-chip">Результат</p>
+          <h1 className="victory-title">Тест завершён</h1>
           <p className="subtitle">
             Балл: <b>{score}</b> из <b>{questions.length}</b>
           </p>
