@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
 import PageLayout from "../components/PageLayout.jsx";
@@ -24,6 +24,8 @@ export default function MultiPlayPage() {
   const [submitting, setSubmitting] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
+  const selectedRef = useRef([]);
+  const timerHandledRef = useRef(false);
 
   const room = state?.room;
   const question = state?.currentQuestion;
@@ -38,12 +40,41 @@ export default function MultiPlayPage() {
 
   useEffect(() => {
     setSelected([]);
+    timerHandledRef.current = false;
   }, [room?.current_index, room?.status]);
+
+  useEffect(() => {
+    selectedRef.current = selected;
+  }, [selected]);
 
   useEffect(() => {
     if (!room?.question_deadline_at || room.status !== "playing") {
       setSecondsLeft(0);
       return undefined;
+    }
+
+    async function onTimerEnd() {
+      if (timerHandledRef.current || me?.has_answered) return;
+      timerHandledRef.current = true;
+
+      const pending = selectedRef.current;
+      try {
+        if (pending.length > 0) {
+          await apiRequest("/api/game/answer", {
+            method: "POST",
+            body: { roomId, selected: pending },
+          });
+        } else {
+          await apiRequest("/api/game/timeout", {
+            method: "POST",
+            body: { roomId },
+          });
+        }
+        await refresh();
+      } catch (err) {
+        console.error(err);
+        timerHandledRef.current = false;
+      }
     }
 
     function tick() {
@@ -52,13 +83,8 @@ export default function MultiPlayPage() {
         Math.ceil((new Date(room.question_deadline_at).getTime() - Date.now()) / 1000)
       );
       setSecondsLeft(left);
-      if (left === 0 && !me?.has_answered) {
-        apiRequest("/api/game/timeout", {
-          method: "POST",
-          body: { roomId },
-        })
-          .then(() => refresh())
-          .catch(() => {});
+      if (left === 0) {
+        onTimerEnd();
       }
     }
 
@@ -274,6 +300,9 @@ export default function MultiPlayPage() {
             </div>
             {me?.has_answered && !showPlayerAnswers && (
               <p className="muted">Ждём соперника или окончания таймера…</p>
+            )}
+            {!me?.has_answered && selected.length > 0 && (
+              <p className="muted">При окончании таймера выбранные варианты отправятся автоматически.</p>
             )}
           </>
         )}
