@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { questions } from "./questions";
+import { questions as sourceQuestions } from "./questions";
 
 function arraysEqualAsSet(a, b) {
   if (a.length !== b.length) return false;
@@ -7,13 +7,46 @@ function arraysEqualAsSet(a, b) {
   return b.every((item) => setA.has(item));
 }
 
+function shuffleArray(items) {
+  const next = [...items];
+  for (let i = next.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [next[i], next[j]] = [next[j], next[i]];
+  }
+  return next;
+}
+
+function prepareQuestionsSet() {
+  return shuffleArray(sourceQuestions).map((question) => {
+    const optionsWithFlags = question.options.map((optionText, optionIndex) => ({
+      text: optionText,
+      isCorrect: question.correct.includes(optionIndex),
+    }));
+
+    return {
+      ...question,
+      options: shuffleArray(optionsWithFlags),
+    };
+  });
+}
+
+function getCorrectIndexes(question) {
+  return question.options.reduce((acc, option, index) => {
+    if (option.isCorrect) acc.push(index);
+    return acc;
+  }, []);
+}
+
+function isQuestionCorrect(question, selected) {
+  return arraysEqualAsSet(selected, getCorrectIndexes(question));
+}
+
 function getAnswerState(question, selected) {
   const selectedSet = new Set(selected);
-  const correctSet = new Set(question.correct);
 
-  return question.options.map((_, optionIndex) => {
+  return question.options.map((option, optionIndex) => {
     const isSelected = selectedSet.has(optionIndex);
-    const isCorrect = correctSet.has(optionIndex);
+    const isCorrect = option.isCorrect;
 
     if (isCorrect && isSelected) return "right-selected";
     if (isCorrect && !isSelected) return "right-missed";
@@ -23,6 +56,7 @@ function getAnswerState(question, selected) {
 }
 
 export default function App() {
+  const [questions, setQuestions] = useState(() => prepareQuestionsSet());
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -33,6 +67,13 @@ export default function App() {
 
   const currentQuestion = questions[currentIndex];
   const selected = answers[currentQuestion?.id] || [];
+  const currentAnswerStates = currentQuestion
+    ? getAnswerState(currentQuestion, selected)
+    : [];
+  const currentIsCorrect =
+    currentQuestion && selected.length > 0
+      ? isQuestionCorrect(currentQuestion, selected)
+      : null;
   const answeredCount = useMemo(
     () => Object.values(answers).filter((value) => value.length > 0).length,
     [answers]
@@ -41,9 +82,9 @@ export default function App() {
   const score = useMemo(() => {
     return questions.reduce((acc, question) => {
       const userSelected = answers[question.id] || [];
-      return arraysEqualAsSet(userSelected, question.correct) ? acc + 1 : acc;
+      return isQuestionCorrect(question, userSelected) ? acc + 1 : acc;
     }, 0);
-  }, [answers]);
+  }, [answers, questions]);
 
   const progressPercent = Math.round(((currentIndex + 1) / questions.length) * 100);
   const isLastQuestion = currentIndex === questions.length - 1;
@@ -82,6 +123,7 @@ export default function App() {
     setFinished(false);
     setCurrentIndex(0);
     setAnswers({});
+    setQuestions(prepareQuestionsSet());
   }
 
   if (!started) {
@@ -94,7 +136,13 @@ export default function App() {
             20 вопросов, прохождение по одному вопросу. После завершения откроется
             полный разбор с правильными ответами.
           </p>
-          <button className="primary-btn" onClick={() => setStarted(true)}>
+          <button
+            className="primary-btn"
+            onClick={() => {
+              setQuestions(prepareQuestionsSet());
+              setStarted(true);
+            }}
+          >
             Начать тест
           </button>
           <p className="attempts">Завершенных попыток: {attempts}</p>
@@ -123,7 +171,7 @@ export default function App() {
             {questions.map((question) => {
               const userSelected = answers[question.id] || [];
               const states = getAnswerState(question, userSelected);
-              const isCorrect = arraysEqualAsSet(userSelected, question.correct);
+              const isCorrect = isQuestionCorrect(question, userSelected);
 
               return (
                 <article className="review-item" key={question.id}>
@@ -138,8 +186,11 @@ export default function App() {
 
                   <ul className="review-options">
                     {question.options.map((option, idx) => (
-                      <li key={option} className={`state-${states[idx]}`}>
-                        {option}
+                      <li
+                        key={`${question.id}-${idx}-${option.text.slice(0, 16)}`}
+                        className={`state-${states[idx]}`}
+                      >
+                        {option.text}
                       </li>
                     ))}
                   </ul>
@@ -172,14 +223,21 @@ export default function App() {
             ? "Можно выбрать несколько вариантов."
             : "Можно выбрать только один вариант."}
         </p>
+        {currentIsCorrect !== null && (
+          <p className={currentIsCorrect ? "live-result right" : "live-result wrong"}>
+            {currentIsCorrect ? "Верно, ответ правильный." : "Пока неверно, проверь ответ."}
+          </p>
+        )}
 
         <div className="options">
           {currentQuestion.options.map((option, idx) => {
             const checked = selected.includes(idx);
+            const answerState =
+              selected.length > 0 ? `state-${currentAnswerStates[idx]}` : "";
             return (
               <label
-                key={option}
-                className={checked ? "option active" : "option"}
+                key={`${currentQuestion.id}-${idx}-${option.text.slice(0, 16)}`}
+                className={checked ? `option active ${answerState}` : `option ${answerState}`}
                 onClick={() => handleOptionToggle(idx)}
               >
                 <input
@@ -188,7 +246,7 @@ export default function App() {
                   checked={checked}
                   onChange={() => handleOptionToggle(idx)}
                 />
-                <span>{option}</span>
+                <span>{option.text}</span>
               </label>
             );
           })}

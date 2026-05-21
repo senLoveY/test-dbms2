@@ -94,6 +94,19 @@ p {
   color: #94a3b8;
 }
 
+.live-result {
+  margin-top: 10px;
+  font-weight: 700;
+}
+
+.live-result.right {
+  color: #34d399;
+}
+
+.live-result.wrong {
+  color: #fda4af;
+}
+
 .options {
   margin-top: 18px;
   display: grid;
@@ -114,6 +127,20 @@ p {
 .option.active {
   border-color: #22d3ee;
   background: rgba(34, 211, 238, 0.15);
+}
+
+.option.state-right-selected {
+  border-color: rgba(52, 211, 153, 0.65);
+  background: rgba(16, 185, 129, 0.16);
+}
+
+.option.state-right-missed {
+  border-color: rgba(251, 191, 36, 0.6);
+}
+
+.option.state-wrong-selected {
+  border-color: rgba(252, 165, 165, 0.65);
+  background: rgba(248, 113, 113, 0.15);
 }
 
 .option input {
