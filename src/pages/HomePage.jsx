@@ -1,55 +1,140 @@
 import Button from "../components/Button.jsx";
-import PageLayout from "../components/PageLayout.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
+
+const FEATURES = [
+  {
+    id: "solo",
+    icon: "📘",
+    title: "Соло-тест",
+    desc: "20 вопросов в своём темпе с мгновенной проверкой и разбором.",
+    to: "/solo",
+    cta: "Начать",
+    variant: "primary",
+    accent: "solo",
+  },
+  {
+    id: "duel",
+    icon: "⚔️",
+    title: "Дуэль",
+    desc: "Сразитесь с другом: таймер, очки за скорость и настройки комнаты.",
+    to: null,
+    cta: null,
+    variant: "primary",
+    accent: "duel",
+  },
+  {
+    id: "answers",
+    icon: "✓",
+    title: "Справочник",
+    desc: "Все вопросы и правильные варианты — удобно повторить перед экзаменом.",
+    to: "/answers",
+    cta: "Открыть",
+    variant: "secondary",
+    accent: "answers",
+  },
+];
 
 export default function HomePage() {
   const { user, profile, signOut, isConfigured } = useAuth();
+  const displayName = profile?.username || user?.email?.split("@")[0];
 
   return (
-    <PageLayout className="intro">
-      <p className="chip">MS SQL Server</p>
-      <h1>Тренировочный тест</h1>
-      <p className="subtitle">
-        Соло-режим, дуэль с другом в реальном времени и справочник ответов.
-      </p>
-
-      {!isConfigured && (
-        <p className="live-result wrong">
-          Supabase не настроен. Добавьте переменные из `.env.example`.
-        </p>
-      )}
-
-      <div className="stack stack-center">
-        <Button variant="primary" to="/solo" block>
-          Начать соло-тест
-        </Button>
-        <Button variant="secondary" to="/answers" block>
-          Правильные ответы
-        </Button>
+    <main className="app home-page">
+      <div className="home-bg" aria-hidden="true">
+        <span className="home-orb home-orb-a" />
+        <span className="home-orb home-orb-b" />
+        <span className="home-grid" />
       </div>
 
-      {user ? (
-        <div className="stack stack-center">
-          <Button variant="primary" to="/multi/create" block>
-            Создать комнату
-          </Button>
-          <Button variant="secondary" to="/multi/join" block>
-            Войти по коду
-          </Button>
-          <Button variant="danger" block onClick={signOut}>
-            Выйти ({profile?.username || user.email})
-          </Button>
+      <header className="home-hero">
+        <p className="chip home-chip">MS SQL Server</p>
+        <h1 className="home-title">
+          Тренировочный
+          <span className="home-title-accent"> тест</span>
+        </h1>
+        <p className="home-lead">
+          Готовьтесь к экзамену в соло-режиме или устройте дуэль с другом в реальном
+          времени.
+        </p>
+
+        {user && (
+          <div className="home-user-pill">
+            <span className="home-user-avatar">{displayName?.[0]?.toUpperCase() || "?"}</span>
+            <span>
+              Привет, <strong>{displayName}</strong>
+            </span>
+          </div>
+        )}
+
+        {!isConfigured && (
+          <p className="live-result wrong home-alert">
+            Supabase не настроен. Добавьте переменные из `.env.example`.
+          </p>
+        )}
+      </header>
+
+      <section className="home-features" aria-label="Режимы">
+        {FEATURES.map((feature) => (
+          <article
+            key={feature.id}
+            className={`home-feature-card home-feature-${feature.accent}`}
+          >
+            <span className="home-feature-icon" aria-hidden="true">
+              {feature.icon}
+            </span>
+            <h2>{feature.title}</h2>
+            <p>{feature.desc}</p>
+            {feature.id === "duel" ? (
+              user ? (
+                <div className="home-feature-actions">
+                  <Button variant="primary" to="/multi/create">
+                    Создать
+                  </Button>
+                  <Button variant="secondary" to="/multi/join">
+                    Войти
+                  </Button>
+                </div>
+              ) : (
+                <div className="home-feature-actions">
+                  <Button variant="primary" to="/login">
+                    Войти
+                  </Button>
+                  <Button variant="secondary" to="/register">
+                    Регистрация
+                  </Button>
+                </div>
+              )
+            ) : (
+              <Button variant={feature.variant} to={feature.to}>
+                {feature.cta}
+              </Button>
+            )}
+          </article>
+        ))}
+      </section>
+
+      <section className="home-stats card">
+        <div className="home-stat">
+          <span className="home-stat-value">20</span>
+          <span className="home-stat-label">вопросов в базе</span>
         </div>
-      ) : (
-        <div className="stack stack-center">
-          <Button variant="primary" to="/login" block>
-            Войти
-          </Button>
-          <Button variant="secondary" to="/register" block>
-            Регистрация
-          </Button>
+        <div className="home-stat">
+          <span className="home-stat-value">2</span>
+          <span className="home-stat-label">игрока в дуэли</span>
         </div>
+        <div className="home-stat">
+          <span className="home-stat-value">∞</span>
+          <span className="home-stat-label">попыток в соло</span>
+        </div>
+      </section>
+
+      {user && (
+        <footer className="home-footer">
+          <Button variant="danger" onClick={signOut}>
+            Выйти из аккаунта
+          </Button>
+        </footer>
       )}
-    </PageLayout>
+    </main>
   );
 }
