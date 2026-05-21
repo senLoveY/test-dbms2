@@ -1,6 +1,7 @@
 import { getUserFromRequest } from "../../lib/supabaseAdmin.js";
-import { createRoom } from "../../lib/roomService.js";
+import { updateRoomSettings } from "../../lib/roomService.js";
 import {
+  badRequest,
   methodNotAllowed,
   sendJson,
   serverError,
@@ -14,9 +15,13 @@ export default async function handler(req, res) {
     const { user, error: authError } = await getUserFromRequest(req);
     if (authError) return unauthorized(res, authError);
 
-    const { settings } = req.body || {};
-    const room = await createRoom(user.id, settings);
-    return sendJson(res, 200, { room });
+    const { roomId, settings } = req.body || {};
+    if (!roomId) return badRequest(res, "roomId is required");
+
+    const result = await updateRoomSettings(roomId, user.id, settings || {});
+    if (result.error) return badRequest(res, result.error);
+
+    return sendJson(res, 200, result);
   } catch (error) {
     return serverError(res, error);
   }

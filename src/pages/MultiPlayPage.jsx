@@ -12,8 +12,6 @@ import {
 } from "../lib/api.js";
 import { useRoomState } from "../hooks/useRoomState.js";
 
-const REVEAL_PAUSE_MS = 3500;
-
 export default function MultiPlayPage() {
   const { code } = useParams();
   const navigate = useNavigate();
@@ -32,6 +30,11 @@ export default function MultiPlayPage() {
   const me = state?.players?.find((p) => p.user_id === user?.id);
   const isHost = room?.host_id === user?.id;
   const showPlayerAnswers = state?.showPlayerAnswers;
+  const settings = state?.settings;
+  const revealPauseMs = settings?.revealPauseMs ?? 3500;
+  const autoSubmitOnTimeout = settings?.autoSubmitOnTimeout ?? true;
+  const questionTotal =
+    room?.question_ids?.length || settings?.questionCount || 20;
 
   const sortedPlayers = useMemo(
     () => [...(state?.players || [])].sort((a, b) => b.score - a.score),
@@ -59,7 +62,7 @@ export default function MultiPlayPage() {
 
       const pending = selectedRef.current;
       try {
-        if (pending.length > 0) {
+        if (pending.length > 0 && autoSubmitOnTimeout) {
           await apiRequest("/api/game/answer", {
             method: "POST",
             body: { roomId, selected: pending },
@@ -91,7 +94,14 @@ export default function MultiPlayPage() {
     tick();
     const interval = setInterval(tick, 250);
     return () => clearInterval(interval);
-  }, [room?.question_deadline_at, room?.status, me?.has_answered, roomId, refresh]);
+  }, [
+    room?.question_deadline_at,
+    room?.status,
+    me?.has_answered,
+    roomId,
+    refresh,
+    autoSubmitOnTimeout,
+  ]);
 
   useEffect(() => {
     if (!isHost || room?.status !== "revealing") return undefined;
@@ -102,9 +112,9 @@ export default function MultiPlayPage() {
       })
         .then(() => refresh())
         .catch(() => {});
-    }, REVEAL_PAUSE_MS);
+    }, revealPauseMs);
     return () => clearTimeout(timer);
-  }, [isHost, room?.status, room?.current_index, roomId, refresh]);
+  }, [isHost, room?.status, room?.current_index, roomId, refresh, revealPauseMs]);
 
   function toggleOption(index) {
     if (!question || me?.has_answered || room?.status !== "playing") return;
@@ -229,7 +239,7 @@ export default function MultiPlayPage() {
       <section className="card quiz">
         <div className="top-row">
           <p className="counter">
-            Вопрос {(room?.current_index ?? 0) + 1} / {room?.question_ids?.length || 20}
+            Вопрос {(room?.current_index ?? 0) + 1} / {questionTotal}
           </p>
           <p className="timer">⏱ {secondsLeft} с</p>
         </div>
@@ -301,7 +311,7 @@ export default function MultiPlayPage() {
             {me?.has_answered && !showPlayerAnswers && (
               <p className="muted">Ждём соперника или окончания таймера…</p>
             )}
-            {!me?.has_answered && selected.length > 0 && (
+            {!me?.has_answered && selected.length > 0 && autoSubmitOnTimeout && (
               <p className="muted">При окончании таймера выбранные варианты отправятся автоматически.</p>
             )}
           </>
