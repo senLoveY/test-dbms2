@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { questions as sourceQuestions } from "./questions";
 
 function arraysEqualAsSet(a, b) {
@@ -55,7 +55,62 @@ function getAnswerState(question, selected) {
   });
 }
 
+function getRouteFromHash() {
+  if (typeof window === "undefined") return "quiz";
+  return window.location.hash === "#/answers" ? "answers" : "quiz";
+}
+
+function navigateTo(route) {
+  if (typeof window === "undefined") return;
+  window.location.hash = route === "answers" ? "#/answers" : "#/";
+}
+
+function AnswersPage() {
+  return (
+    <main className="app">
+      <section className="card answers-page-header">
+        <h1>Правильные ответы</h1>
+        <p className="subtitle">
+          Полный список вопросов с правильными вариантами ответов.
+        </p>
+        <button className="primary-btn" onClick={() => navigateTo("quiz")}>
+          Вернуться к тесту
+        </button>
+      </section>
+
+      <section className="card review">
+        <div className="review-list">
+          {sourceQuestions.map((question) => (
+            <article className="review-item" key={question.id}>
+              <div className="review-header">
+                <h3>
+                  {question.id}. {question.text}
+                </h3>
+              </div>
+
+              <ul className="review-options">
+                {question.options.map((option, optionIndex) => {
+                  const isCorrect = question.correct.includes(optionIndex);
+                  return (
+                    <li
+                      key={`${question.id}-${optionIndex}-${option.slice(0, 16)}`}
+                      className={isCorrect ? "state-right-selected" : "state-neutral"}
+                    >
+                      {option}
+                    </li>
+                  );
+                })}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export default function App() {
+  const [route, setRoute] = useState(() => getRouteFromHash());
   const [questions, setQuestions] = useState(() => prepareQuestionsSet());
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState(false);
@@ -91,6 +146,15 @@ export default function App() {
 
   const progressPercent = Math.round(((currentIndex + 1) / questions.length) * 100);
   const isLastQuestion = currentIndex === questions.length - 1;
+
+  useEffect(() => {
+    function handleHashChange() {
+      setRoute(getRouteFromHash());
+    }
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
 
   function handleOptionToggle(optionIndex) {
     setCheckedMap((prev) => ({ ...prev, [currentQuestion.id]: false }));
@@ -136,6 +200,10 @@ export default function App() {
     setQuestions(prepareQuestionsSet());
   }
 
+  if (route === "answers") {
+    return <AnswersPage />;
+  }
+
   if (!started) {
     return (
       <main className="app">
@@ -155,6 +223,9 @@ export default function App() {
           >
             Начать тест
           </button>
+          <button className="ghost-btn" onClick={() => navigateTo("answers")}>
+            Смотреть правильные ответы
+          </button>
           <p className="attempts">Завершенных попыток: {attempts}</p>
         </section>
       </main>
@@ -172,6 +243,9 @@ export default function App() {
           <p>Завершенных попыток на этом устройстве: {attempts}</p>
           <button className="primary-btn" onClick={handleRestart}>
             Пройти заново
+          </button>
+          <button className="ghost-btn" onClick={() => navigateTo("answers")}>
+            Открыть страницу ответов
           </button>
         </section>
 
@@ -220,7 +294,12 @@ export default function App() {
           <p className="counter">
             Вопрос {currentIndex + 1} / {questions.length}
           </p>
-          <p className="counter">Отвечено: {answeredCount}</p>
+          <div className="top-row-right">
+            <p className="counter">Отвечено: {answeredCount}</p>
+            <button className="ghost-btn compact-btn" onClick={() => navigateTo("answers")}>
+              Все ответы
+            </button>
+          </div>
         </div>
 
         <div className="progress-wrap" aria-hidden="true">
