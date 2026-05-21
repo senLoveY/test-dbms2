@@ -1,3 +1,9 @@
+function answerBadge(player) {
+  if (player.last_answer_correct) return { className: "badge right", text: "Верно" };
+  if (player.last_points > 0) return { className: "badge partial", text: "Частично" };
+  return { className: "badge wrong", text: "Неверно" };
+}
+
 export default function PlayerAnswers({ players, title = "Ответы игроков" }) {
   if (!players?.length) return null;
 
@@ -5,40 +11,37 @@ export default function PlayerAnswers({ players, title = "Ответы игро�
     <div className="player-answers">
       <p className="muted">{title}</p>
       <ul className="player-list">
-        {players.map((player) => (
-          <li className="player-card" key={player.user_id}>
-            <div>
-              <strong>{player.username}</strong>
-              {player.answerLabels?.length ? (
-                <ul className="review-options nested-answers">
-                  {player.answerLabels.map((label) => (
-                    <li
-                      key={`${player.user_id}-${label}`}
-                      className={
-                        player.last_answer_correct
-                          ? "state-right-selected"
-                          : "state-wrong-selected"
-                      }
-                    >
-                      {label}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="muted">Не ответил</p>
+        {players.map((player) => {
+          const badge = answerBadge(player);
+          const breakdown = player.answerBreakdown || [];
+
+          return (
+            <li className="player-card" key={player.user_id}>
+              <div>
+                <strong>{player.username}</strong>
+                {breakdown.length ? (
+                  <ul className="review-options nested-answers">
+                    {breakdown.map((item) => (
+                      <li
+                        key={`${player.user_id}-${item.label}`}
+                        className={`state-${item.state}`}
+                      >
+                        {item.label}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="muted">Не ответил</p>
+                )}
+              </div>
+              {player.has_answered && (
+                <span className={badge.className}>
+                  {player.last_points > 0 ? `+${player.last_points}` : "0"} · {badge.text}
+                </span>
               )}
-            </div>
-            {player.has_answered && (
-              <span
-                className={
-                  player.last_answer_correct ? "badge right" : "badge wrong"
-                }
-              >
-                {player.last_points > 0 ? `+${player.last_points}` : "0"}
-              </span>
-            )}
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

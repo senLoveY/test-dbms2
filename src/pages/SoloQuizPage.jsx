@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import Button from "../components/Button.jsx";
 import PageLayout from "../components/PageLayout.jsx";
+import { gradeAnswerDetailed } from "../../lib/gameLogic.js";
 import { questions as sourceQuestions } from "../questions.js";
 import { arraysEqualAsSet, shuffleArray } from "../lib/quiz.js";
 
@@ -9,9 +10,14 @@ function prepareQuestionsSet() {
     const optionsWithFlags = question.options.map((optionText, optionIndex) => ({
       text: optionText,
       isCorrect: question.correct.includes(optionIndex),
+      originalIndex: optionIndex,
     }));
     return { ...question, options: shuffleArray(optionsWithFlags) };
   });
+}
+
+function selectedToOriginal(question, selected) {
+  return selected.map((index) => question.options[index].originalIndex);
 }
 
 function getCorrectIndexes(question) {
@@ -54,9 +60,12 @@ export default function SoloQuizPage() {
   const currentAnswerStates = currentQuestion
     ? getAnswerState(currentQuestion, selected)
     : [];
-  const currentIsCorrect =
+  const currentGrade =
     currentQuestion && currentChecked
-      ? isQuestionCorrect(currentQuestion, selected)
+      ? gradeAnswerDetailed(
+          currentQuestion.id,
+          selectedToOriginal(currentQuestion, selected)
+        )
       : null;
   const score = useMemo(
     () =>
@@ -163,16 +172,27 @@ export default function SoloQuizPage() {
             {questions.map((question) => {
               const userSelected = answers[question.id] || [];
               const states = getAnswerState(question, userSelected);
-              const isCorrect = isQuestionCorrect(question, userSelected);
+              const grade = gradeAnswerDetailed(
+                question.id,
+                selectedToOriginal(question, userSelected)
+              );
+              const badgeClass = grade.isFullyCorrect
+                ? "badge right"
+                : grade.isPartial
+                  ? "badge partial"
+                  : "badge wrong";
+              const badgeText = grade.isFullyCorrect
+                ? "Верно"
+                : grade.isPartial
+                  ? "Частично"
+                  : "Неверно";
               return (
                 <article className="review-item" key={question.id}>
                   <div className="review-header">
                     <h3>
                       {question.id}. {question.text}
                     </h3>
-                    <span className={isCorrect ? "badge right" : "badge wrong"}>
-                      {isCorrect ? "Верно" : "Неверно"}
-                    </span>
+                    <span className={badgeClass}>{badgeText}</span>
                   </div>
                   <ul className="review-options">
                     {question.options.map((option, idx) => (
@@ -210,9 +230,21 @@ export default function SoloQuizPage() {
             ? "Можно выбрать несколько вариантов."
             : "Один вариант ответа."}
         </p>
-        {currentIsCorrect !== null && (
-          <p className={currentIsCorrect ? "live-result right" : "live-result wrong"}>
-            {currentIsCorrect ? "Верно!" : "Неверно."}
+        {currentGrade && (
+          <p
+            className={
+              currentGrade.isFullyCorrect
+                ? "live-result right"
+                : currentGrade.isPartial
+                  ? "live-result partial"
+                  : "live-result wrong"
+            }
+          >
+            {currentGrade.isFullyCorrect
+              ? "Верно!"
+              : currentGrade.isPartial
+                ? "Частично верно: выбраны не все правильные варианты или есть лишние."
+                : "Неверно."}
           </p>
         )}
         <div className="options">
