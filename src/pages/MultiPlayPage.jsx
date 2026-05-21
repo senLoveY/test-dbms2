@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
 import PageLayout from "../components/PageLayout.jsx";
-import PlayerAnswers from "../components/PlayerAnswers.jsx";
+import RoundReveal from "../components/RoundReveal.jsx";
 import VictoryScreen from "../components/VictoryScreen.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import {
@@ -57,16 +57,23 @@ export default function MultiPlayPage() {
     }
 
     async function onTimerEnd() {
-      if (timerHandledRef.current || me?.has_answered) return;
+      if (timerHandledRef.current) return;
       timerHandledRef.current = true;
 
       const pending = selectedRef.current;
       try {
-        if (pending.length > 0 && autoSubmitOnTimeout) {
-          await apiRequest("/api/game/answer", {
-            method: "POST",
-            body: { roomId, selected: pending },
-          });
+        if (!me?.has_answered) {
+          if (pending.length > 0 && autoSubmitOnTimeout) {
+            await apiRequest("/api/game/answer", {
+              method: "POST",
+              body: { roomId, selected: pending },
+            });
+          } else {
+            await apiRequest("/api/game/timeout", {
+              method: "POST",
+              body: { roomId },
+            });
+          }
         } else {
           await apiRequest("/api/game/timeout", {
             method: "POST",
@@ -246,34 +253,28 @@ export default function MultiPlayPage() {
 
         <div className="scoreboard">
           {sortedPlayers.map((player) => (
-            <span key={player.user_id} className="score-pill">
+            <span
+              key={player.user_id}
+              className={`score-pill ${player.has_answered ? "score-pill-answered" : ""}`}
+            >
               {player.username}: {player.score}
               {player.has_answered ? " ✓" : ""}
             </span>
           ))}
         </div>
+        {room?.status === "playing" && (
+          <p className="muted score-pending-hint">Очки обновятся после окончания таймера</p>
+        )}
 
         {loading && <p className="muted">Загрузка...</p>}
         {error && <p className="live-result wrong">{error}</p>}
 
-        {room?.status === "revealing" && state?.reveal && (
-          <div className="reveal-box">
-            <p className="live-result right">Правильный ответ</p>
-            <ul className="review-options">
-              {state.reveal.correctOptions.map((text) => (
-                <li key={text} className="state-right-selected">
-                  {text}
-                </li>
-              ))}
-            </ul>
-            {showPlayerAnswers && (
-              <PlayerAnswers players={sortedPlayers} title="Ответы игроков" />
-            )}
-          </div>
-        )}
-
-        {room?.status === "playing" && showPlayerAnswers && (
-          <PlayerAnswers players={sortedPlayers} title="Оба ответили" />
+        {room?.status === "revealing" && (
+          <RoundReveal
+            players={sortedPlayers}
+            reveal={state?.reveal}
+            showPlayerAnswers={showPlayerAnswers}
+          />
         )}
 
         {room?.status === "playing" && question && (
