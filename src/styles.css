@@ -322,3 +322,56 @@ button:not(:disabled):active {
 .state-neutral {
   color: #cbd5e1;
 }
+
+.auth-form {
+  margin-top: 16px;
+  display: grid;
+  gap: 12px;
+  text-align: left;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 6px;
+  color: #cbd5e1;
+  font-size: 14px;
+}
+
+.auth-form input {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.8);
+  color: #e5e7eb;
+}
+
+.scoreboard {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.timer {
+  color: #fbbf24;
+}
+
+.lobby-players {
+  margin-top: 14px;
+  text-align: left;
+}
+
+.reveal-box {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+a.primary-btn,
+a.ghost-btn {
+  display: inline-block;
+  text-decoration: none;
+  text-align: center;
+}
