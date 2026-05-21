@@ -89,5 +89,10 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
--- Enable Realtime for rooms and room_players in Supabase Dashboard:
--- Database -> Replication -> supabase_realtime publication
+-- Realtime: filters on room_id need FULL replica identity
+alter table public.rooms replica identity full;
+alter table public.room_players replica identity full;
+
+-- Add tables to Realtime publication (run once; skip if already added in Dashboard)
+alter publication supabase_realtime add table public.rooms;
+alter publication supabase_realtime add table public.room_players;

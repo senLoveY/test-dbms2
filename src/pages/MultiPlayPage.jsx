@@ -10,7 +10,7 @@ export default function MultiPlayPage() {
   const { code } = useParams();
   const { user } = useAuth();
   const roomId = loadRoomSession(code);
-  const { state, error, loading } = useRoomState(roomId);
+  const { state, error, loading, refresh } = useRoomState(roomId);
   const [selected, setSelected] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -45,7 +45,9 @@ export default function MultiPlayPage() {
         apiRequest("/api/game/timeout", {
           method: "POST",
           body: { roomId },
-        }).catch(() => {});
+        })
+          .then(() => refresh())
+          .catch(() => {});
       }
     }
 
@@ -60,7 +62,9 @@ export default function MultiPlayPage() {
       apiRequest("/api/game/advance", {
         method: "POST",
         body: { roomId },
-      }).catch(() => {});
+      })
+        .then(() => refresh())
+        .catch(() => {});
     }, REVEAL_PAUSE_MS);
     return () => clearTimeout(timer);
   }, [isHost, room?.status, room?.current_index, roomId]);
@@ -86,6 +90,7 @@ export default function MultiPlayPage() {
         method: "POST",
         body: { roomId, selected },
       });
+      await refresh();
     } catch (err) {
       console.error(err);
     } finally {
