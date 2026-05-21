@@ -216,7 +216,7 @@ export default function App() {
           </p>
           <div className="intro-actions">
             <button
-              className="primary-btn"
+              className="primary-btn intro-action-btn"
               onClick={() => {
                 setQuestions(prepareQuestionsSet());
                 setStarted(true);
@@ -224,7 +224,10 @@ export default function App() {
             >
               Начать тест
             </button>
-            <button className="ghost-btn" onClick={() => navigateTo("answers")}>
+            <button
+              className="ghost-btn intro-action-btn"
+              onClick={() => navigateTo("answers")}
+            >
               Смотреть правильные ответы
             </button>
           </div>

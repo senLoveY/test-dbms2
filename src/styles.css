@@ -35,9 +35,13 @@ body {
 .intro-actions {
   margin-top: 18px;
   display: flex;
-  justify-content: center;
-  gap: 28px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.intro-action-btn {
+  width: min(360px, 90vw);
 }
 
 .chip {
