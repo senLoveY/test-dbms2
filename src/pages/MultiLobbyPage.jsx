@@ -1,7 +1,9 @@
 import { useEffect } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import Button from "../components/Button.jsx";
+import PageLayout from "../components/PageLayout.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
-import { apiRequest, loadRoomSession } from "../lib/api.js";
+import { apiRequest, clearRoomSession, loadRoomSession } from "../lib/api.js";
 import { useRoomState } from "../hooks/useRoomState.js";
 
 export default function MultiLobbyPage() {
@@ -31,56 +33,77 @@ export default function MultiLobbyPage() {
     await refresh();
   }
 
+  async function handleLeave() {
+    if (!window.confirm("Выйти из комнаты?")) return;
+    try {
+      await apiRequest("/api/rooms/leave", {
+        method: "POST",
+        body: { roomId },
+      });
+      clearRoomSession(code);
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   if (!roomId) {
     return (
-      <main className="app">
-        <section className="card intro">
-          <p className="live-result wrong">Комната не найдена. Войдите по коду снова.</p>
-          <Link className="primary-btn intro-action-btn" to="/multi/join">
-            Войти в комнату
-          </Link>
-        </section>
-      </main>
+      <PageLayout className="intro">
+        <p className="live-result wrong">Комната не найдена. Войдите по коду снова.</p>
+        <Button variant="primary" to="/multi/join" block>
+          Войти в комнату
+        </Button>
+      </PageLayout>
     );
   }
 
   return (
-    <main className="app">
-      <section className="card intro">
-        <h1>Лобби</h1>
-        <p className="subtitle">
-          Код комнаты: <b>{code}</b>
-        </p>
-        {loading && <p className="attempts">Загрузка...</p>}
-        {error && <p className="live-result wrong">{error}</p>}
+    <PageLayout className="intro">
+      <p className="chip">Лобби</p>
+      <h1>Ожидание игроков</h1>
+      <p className="subtitle">Передайте код другу:</p>
+      <p className="code-display">{code}</p>
 
-        <ul className="review-options lobby-players">
-          {players.map((player) => (
-            <li key={player.user_id}>
-              {player.username} — {player.score} очков
-              {state?.room?.host_id === player.user_id ? " (хост)" : ""}
-            </li>
-          ))}
-        </ul>
+      {loading && <p className="muted">Загрузка...</p>}
+      {error && <p className="live-result wrong">{error}</p>}
 
-        <p className="attempts">Игроков: {players.length} / 2</p>
+      <ul className="player-list">
+        {players.map((player) => (
+          <li className="player-card" key={player.user_id}>
+            <strong>{player.username}</strong>
+            <span>
+              {state?.room?.host_id === player.user_id && (
+                <span className="host-badge">Хост</span>
+              )}
+              {state?.room?.host_id !== player.user_id && (
+                <span className="muted">{player.score} очков</span>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
 
-        <div className="intro-actions">
-          {isHost && (
-            <button
-              className="primary-btn intro-action-btn"
-              type="button"
-              onClick={handleStart}
-              disabled={players.length < 2}
-            >
-              Начать игру
-            </button>
-          )}
-          <Link className="ghost-btn intro-action-btn" to="/">
-            На главную
-          </Link>
-        </div>
-      </section>
-    </main>
+      <p className="muted">Игроков: {players.length} / 2</p>
+
+      <div className="stack stack-center">
+        {isHost && (
+          <Button
+            variant="primary"
+            block
+            onClick={handleStart}
+            disabled={players.length < 2}
+          >
+            Начать игру
+          </Button>
+        )}
+        <Button variant="danger" block onClick={handleLeave}>
+          Выйти из комнаты
+        </Button>
+        <Button variant="secondary" to="/" block>
+          На главную
+        </Button>
+      </div>
+    </PageLayout>
   );
 }

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import Button from "../components/Button.jsx";
+import PageLayout from "../components/PageLayout.jsx";
 import { questions as sourceQuestions } from "../questions.js";
 import { arraysEqualAsSet, shuffleArray } from "../lib/quiz.js";
 
@@ -111,51 +112,53 @@ export default function SoloQuizPage() {
 
   if (!started) {
     return (
-      <main className="app">
-        <section className="card intro">
-          <h1>Соло-тест</h1>
-          <p className="subtitle">20 вопросов, прохождение по одному вопросу.</p>
-          <div className="intro-actions">
-            <button
-              className="primary-btn intro-action-btn"
-              type="button"
-              onClick={() => {
-                setQuestions(prepareQuestionsSet());
-                setStarted(true);
-              }}
-            >
-              Начать
-            </button>
-            <Link className="ghost-btn intro-action-btn" to="/">
-              На главную
-            </Link>
-          </div>
-          <p className="attempts">Завершенных попыток: {attempts}</p>
-        </section>
-      </main>
+      <PageLayout className="intro">
+        <p className="chip">Соло</p>
+        <h1>Соло-тест</h1>
+        <p className="subtitle">20 вопросов, по одному на экран.</p>
+        <div className="stack stack-center">
+          <Button
+            variant="primary"
+            block
+            onClick={() => {
+              setQuestions(prepareQuestionsSet());
+              setStarted(true);
+            }}
+          >
+            Начать
+          </Button>
+          <Button variant="secondary" to="/" block>
+            На главную
+          </Button>
+        </div>
+        <p className="muted">Завершённых попыток: {attempts}</p>
+      </PageLayout>
     );
   }
 
   if (finished) {
     return (
       <main className="app">
-        <section className="card summary">
-          <h1>Результат</h1>
-          <p>
+        <section className="card summary page-centered">
+          <p className="chip">Результат</p>
+          <h1>Тест завершён</h1>
+          <p className="subtitle">
             Балл: <b>{score}</b> из <b>{questions.length}</b>
           </p>
-          <button className="primary-btn" type="button" onClick={handleRestart}>
-            Пройти заново
-          </button>
-          <Link className="ghost-btn" to="/answers">
-            Открыть ответы
-          </Link>
-          <Link className="ghost-btn" to="/">
-            На главную
-          </Link>
+          <div className="stack stack-center">
+            <Button variant="primary" block onClick={handleRestart}>
+              Пройти заново
+            </Button>
+            <Button variant="secondary" to="/answers" block>
+              Открыть ответы
+            </Button>
+            <Button variant="secondary" to="/" block>
+              На главную
+            </Button>
+          </div>
         </section>
         <section className="card review">
-          <h2>Разбор</h2>
+          <h2>Разбор ответов</h2>
           <div className="review-list">
             {questions.map((question) => {
               const userSelected = answers[question.id] || [];
@@ -194,9 +197,9 @@ export default function SoloQuizPage() {
           <p className="counter">
             Вопрос {currentIndex + 1} / {questions.length}
           </p>
-          <Link className="ghost-btn compact-btn" to="/">
+          <Button variant="secondary" to="/">
             Выход
-          </Link>
+          </Button>
         </div>
         <div className="progress-wrap" aria-hidden="true">
           <div className="progress-bar" style={{ width: `${progressPercent}%` }} />
@@ -205,7 +208,7 @@ export default function SoloQuizPage() {
         <p className="type-tip">
           {currentQuestion.type === "multiple"
             ? "Можно выбрать несколько вариантов."
-            : "Один вариант."}
+            : "Один вариант ответа."}
         </p>
         {currentIsCorrect !== null && (
           <p className={currentIsCorrect ? "live-result right" : "live-result wrong"}>
@@ -232,30 +235,27 @@ export default function SoloQuizPage() {
           })}
         </div>
         <div className="actions">
-          <button
-            className="ghost-btn"
-            type="button"
+          <Button
+            variant="secondary"
             onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
             disabled={currentIndex === 0}
           >
             Назад
-          </button>
-          <button
-            className="check-btn"
-            type="button"
+          </Button>
+          <Button
+            variant="accent"
             onClick={handleCheckAnswer}
             disabled={!selected.length || currentChecked}
           >
-            Ответить
-          </button>
-          <button
-            className="primary-btn"
-            type="button"
+            Проверить
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleNext}
             disabled={!selected.length || !currentChecked}
           >
             {isLastQuestion ? "Завершить" : "Далее"}
-          </button>
+          </Button>
         </div>
       </section>
     </main>

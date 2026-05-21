@@ -72,6 +72,8 @@ npx vercel dev       # фронт + API вместе (рекомендуется
 - `POST /api/game/answer` — отправить ответ
 - `POST /api/game/timeout` — истечение таймера
 - `POST /api/game/advance` — следующий вопрос (хост, после reveal)
+- `POST /api/game/end` — досрочно завершить игру (хост)
+- `POST /api/rooms/leave` — выйти из комнаты (во время игры завершает матч)
 
 Все запросы (кроме публичных) требуют заголовок `Authorization: Bearer <supabase_access_token>`.
 
