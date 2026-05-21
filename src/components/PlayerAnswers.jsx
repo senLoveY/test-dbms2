@@ -1,6 +1,7 @@
 function answerBadge(player) {
+  const roundPts = player.roundPoints ?? player.last_points ?? 0;
   if (player.last_answer_correct) return { className: "badge right", text: "Верно" };
-  if (player.last_points > 0) return { className: "badge partial", text: "Частично" };
+  if (roundPts > 0) return { className: "badge partial", text: "Частично" };
   return { className: "badge wrong", text: "Неверно" };
 }
 
@@ -36,7 +37,10 @@ export default function PlayerAnswers({ players, title = "Ответы игро�
               </div>
               {player.has_answered && (
                 <span className={badge.className}>
-                  {player.last_points > 0 ? `+${player.last_points}` : "0"} · {badge.text}
+                  {(player.roundPoints ?? player.last_points ?? 0) > 0
+                    ? `+${player.roundPoints ?? player.last_points}`
+                    : "0"}{" "}
+                  · {badge.text}
                 </span>
               )}
             </li>

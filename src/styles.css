@@ -487,6 +487,151 @@ a.btn-danger:focus-visible {
   gap: 8px;
 }
 
+.score-pill-answered {
+  border-color: rgba(52, 211, 153, 0.45);
+}
+
+.score-pending-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ——— Round reveal animations ——— */
+
+.round-reveal {
+  margin-top: 16px;
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.round-reveal-enter {
+  animation: round-reveal-in 0.55s ease forwards;
+}
+
+@keyframes round-reveal-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.round-winner-banner {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  background: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.2),
+    rgba(34, 211, 238, 0.08)
+  );
+  color: var(--text-soft);
+  font-size: 14px;
+  text-align: center;
+  animation: winner-pulse 1.2s ease-in-out 0.35s 2;
+}
+
+@keyframes winner-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(251, 191, 36, 0);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(251, 191, 36, 0.35);
+  }
+}
+
+.round-scoreboard {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.round-score-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.55);
+  transition: transform 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.round-score-card-winner {
+  border-color: rgba(251, 191, 36, 0.65);
+  background: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.14),
+    rgba(15, 23, 42, 0.6)
+  );
+  box-shadow: 0 10px 28px rgba(251, 191, 36, 0.18);
+  transform: scale(1.02);
+  animation: winner-card-glow 1.5s ease-in-out 0.2s infinite alternate;
+}
+
+@keyframes winner-card-glow {
+  from {
+    box-shadow: 0 8px 20px rgba(251, 191, 36, 0.12);
+  }
+  to {
+    box-shadow: 0 12px 32px rgba(251, 191, 36, 0.28);
+  }
+}
+
+.round-score-name {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.round-score-values {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.animated-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--accent);
+}
+
+.score-from {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.score-arrow {
+  color: var(--text-muted);
+}
+
+.score-to {
+  color: var(--accent);
+}
+
+.round-points-delta {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.round-points-delta.positive {
+  color: var(--success);
+}
+
+.round-points-delta.zero {
+  color: var(--text-muted);
+}
+
+.reveal-box-nested {
+  margin-top: 12px;
+}
+
 .scoreboard .chip,
 .score-pill {
   display: inline-flex;
