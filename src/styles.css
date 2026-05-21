@@ -32,8 +32,12 @@ body {
   text-align: center;
 }
 
-.intro button + button {
+.intro-actions {
   margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: wrap;
 }
 
 .chip {
