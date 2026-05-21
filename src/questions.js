@@ -36,7 +36,7 @@ export const questions = [
       "Создать для пользователя логин и добавить в группу 'Системные администраторы' MS SQL Server, что автоматически выдаст необходимые привилегии в базе данных",
       "Создать пользователя в базе данных с необходимыми правами, и назначить ему логин 'Sa' аккаунта, чтобы исключить возможные неполадки с доступом",
     ],
-    correct: [2],
+    correct: [0],
   },
   {
     id: 4,
@@ -129,7 +129,7 @@ export const questions = [
   },
   {
     id: 11,
-    type: "single",
+    type: "multiple",
     text: "Выберите верный вариант ответа, в котором перечислены средства мониторинга и поиска неисправностей MS SQL Server.",
     options: [
       "SQL server Audit, SQL server profiler, SQL server Reporting service reports",
@@ -139,7 +139,7 @@ export const questions = [
       "SQL server Agent. SQL server profiler. SQL Extended events",
       "SQL server Audit, SQL server profiler, SQL Extended events",
     ],
-    correct: [5],
+    correct: [2, 5],
   },
   {
     id: 12,
@@ -178,7 +178,7 @@ export const questions = [
       "Latest Transaction Log backup, latest Differential backup, latest full backup, tail-log backup",
       "Latest Full backup, latest differential backup, transaction log backup l..n, n - latest transaction log backup",
     ],
-    correct: [4],
+    correct: [0],
   },
   {
     id: 15,
@@ -191,7 +191,7 @@ export const questions = [
       "sqlcmd -S ComputerA1691",
       "sqlcmd -S tcp:ComputerA1433",
     ],
-    correct: [1],
+    correct: [0, 1, 2, 3, 4],
   },
   {
     id: 16,
@@ -211,7 +211,7 @@ export const questions = [
     type: "multiple",
     text: "Выберите системные базы данных, созданные при установке МS SQL Server",
     options: ["MASTER", "RESOURCES", "MSDB", "TEMP", "BACKUPS"],
-    correct: [0, 1, 2],
+    correct: [0, 2],
   },
   {
     id: 18,
