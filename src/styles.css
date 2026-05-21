@@ -960,6 +960,14 @@ a.btn-danger:focus-visible {
   color: var(--text-soft);
 }
 
+.settings-card .room-settings {
+  margin-bottom: 4px;
+}
+
+.settings-card > .btn {
+  margin-top: 24px;
+}
+
 .preset-row {
   display: flex;
   flex-wrap: wrap;
