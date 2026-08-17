@@ -1,6 +1,11 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/quizzes.js": {
+      "maxDuration": 60
+    }
+  },
   "rewrites": [
     { "source": "/api/rooms/:action", "destination": "/api/rooms?action=:action" },
     { "source": "/api/game/:action", "destination": "/api/game?action=:action" },

@@ -9,6 +9,7 @@ import {
   saveAttempt,
   updateQuiz,
 } from "../lib/quizService.js";
+import { generateQuizFromText } from "../lib/quizGenerate.js";
 import { getApiParts } from "../lib/apiPath.js";
 import {
   forbidden,
@@ -18,6 +19,10 @@ import {
   serverError,
   unauthorized,
 } from "../lib/http.js";
+
+export const config = {
+  maxDuration: 60,
+};
 
 function mapServiceError(res, error) {
   if (error === "Quiz not found") return notFound(res, error);
@@ -43,6 +48,17 @@ export default async function handler(req, res) {
         return sendJson(res, 201, result);
       }
       return methodNotAllowed(res);
+    }
+
+    if (extra === "generate") {
+      if (req.method !== "POST") return methodNotAllowed(res);
+      const owned = await getQuiz(quizId, user.id);
+      if (owned.error) return mapServiceError(res, owned.error);
+
+      const { source, count, allowMultiple } = req.body || {};
+      const result = await generateQuizFromText({ source, count, allowMultiple });
+      if (result.error) return sendJson(res, 400, { error: result.error });
+      return sendJson(res, 200, result);
     }
 
     if (extra === "duplicate") {

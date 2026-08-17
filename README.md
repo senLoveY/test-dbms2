@@ -30,6 +30,7 @@ cp .env.example .env
 
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — для фронтенда
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — для API на Vercel
+- `DEEPSEEK_API_KEY` — для генерации вопросов из текста (ключ с [platform.deepseek.com](https://platform.deepseek.com))
 
 **Важно:** URL — только корень проекта (`https://xxx.supabase.co`), **без** `/rest/v1/`.
 
@@ -50,7 +51,7 @@ npx vercel dev       # фронт + API вместе (рекомендуется
 ## Как пользоваться
 
 1. Регистрация / вход.
-2. **Кабинет** (`/me/quizzes`) — создать тест, добавить вопросы или импортировать JSON.
+2. **Кабинет** (`/me/quizzes`) — создать тест, сгенерировать из текста, добавить вопросы вручную или импортировать JSON.
 3. **Опубликовать** тест.
 4. **Соло** — подготовка со своей скоростью и разбором.
 5. **Дуэль** — комната по коду, 2 игрока, таймер и очки.
@@ -66,6 +67,7 @@ npx vercel dev       # фронт + API вместе (рекомендуется
 - `GET /api/quizzes/:id` — тест с вопросами (только автор)
 - `PUT /api/quizzes/:id` — сохранить / опубликовать
 - `DELETE /api/quizzes/:id` — удалить
+- `POST /api/quizzes/:id/generate` — черновик вопросов из текста (DeepSeek)
 - `POST /api/quizzes/:id/duplicate` — копия
 - `GET|POST /api/quizzes/:id/attempt` — попытки соло
 
