@@ -2,6 +2,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/api/rooms/:action", "destination": "/api/rooms?action=:action" },
+    { "source": "/api/game/:action", "destination": "/api/game?action=:action" },
+    { "source": "/api/quizzes/:id/:extra", "destination": "/api/quizzes?id=:id&extra=:extra" },
+    { "source": "/api/quizzes/:id", "destination": "/api/quizzes?id=:id" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

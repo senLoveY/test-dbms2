@@ -5,7 +5,7 @@
 ## Стек
 
 - **Frontend:** React + Vite (деплой на Vercel)
-- **API:** Vercel Serverless Functions (`/api/*`)
+- **API:** 3 Vercel Serverless Functions (`/api/rooms`, `/api/game`, `/api/quizzes`) — старые пути вроде `/api/rooms/create` проксируются rewrite'ами.
 - **БД + Auth + Realtime:** Supabase
 
 ## Быстрый старт
