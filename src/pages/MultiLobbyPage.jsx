@@ -59,11 +59,16 @@ export default function MultiLobbyPage() {
   }
 
   async function handleStart() {
-    await apiRequest("/api/game/start", {
-      method: "POST",
-      body: { roomId },
-    });
-    await refresh();
+    setSettingsError("");
+    try {
+      await apiRequest("/api/game/start", {
+        method: "POST",
+        body: { roomId },
+      });
+      await refresh();
+    } catch (err) {
+      setSettingsError(err.message);
+    }
   }
 
   async function handleLeave() {
@@ -96,6 +101,9 @@ export default function MultiLobbyPage() {
       <header className="lobby-header">
         <p className="chip">Лобби</p>
         <h1>Ожидание игроков</h1>
+        {state?.quiz?.title && (
+          <p className="subtitle">{state.quiz.title}</p>
+        )}
         <p className="subtitle">Код комнаты:</p>
         <p className="code-display">{code}</p>
       </header>
@@ -128,6 +136,7 @@ export default function MultiLobbyPage() {
             <>
               <RoomSettingsForm
                 settings={localSettings || DEFAULT_ROOM_SETTINGS}
+                maxQuestions={state?.quiz?.questionCount}
                 onChange={setLocalSettings}
                 onPreset={(preset) => {
                   const { label, ...rest } = preset;

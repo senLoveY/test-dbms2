@@ -14,9 +14,10 @@ export default async function handler(req, res) {
     const { user, error: authError } = await getUserFromRequest(req);
     if (authError) return unauthorized(res, authError);
 
-    const { settings } = req.body || {};
-    const room = await createRoom(user.id, settings);
-    return sendJson(res, 200, { room });
+    const { settings, quizId } = req.body || {};
+    const result = await createRoom(user.id, settings, quizId);
+    if (result.error) return sendJson(res, 400, { error: result.error });
+    return sendJson(res, 200, { room: result.room });
   } catch (error) {
     return serverError(res, error);
   }

@@ -1,42 +1,30 @@
+import { useEffect, useState } from "react";
 import Button from "../components/Button.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
-
-const FEATURES = [
-  {
-    id: "solo",
-    icon: "📘",
-    title: "Соло-тест",
-    desc: "20 вопросов в своём темпе с мгновенной проверкой и разбором.",
-    to: "/solo",
-    cta: "Начать",
-    variant: "primary",
-    accent: "solo",
-  },
-  {
-    id: "duel",
-    icon: "⚔️",
-    title: "Дуэль",
-    desc: "Сразитесь с другом: таймер, очки за скорость и настройки комнаты.",
-    to: null,
-    cta: null,
-    variant: "primary",
-    accent: "duel",
-  },
-  {
-    id: "answers",
-    icon: "✓",
-    title: "Справочник",
-    desc: "Все вопросы и правильные варианты — удобно повторить перед экзаменом.",
-    to: "/answers",
-    cta: "Открыть",
-    variant: "secondary",
-    accent: "answers",
-  },
-];
+import { apiRequest } from "../lib/api.js";
 
 export default function HomePage() {
   const { user, profile, signOut, isConfigured } = useAuth();
   const displayName = profile?.username || user?.email?.split("@")[0];
+  const [quizzes, setQuizzes] = useState([]);
+
+  useEffect(() => {
+    if (!user) {
+      setQuizzes([]);
+      return undefined;
+    }
+    let cancelled = false;
+    apiRequest("/api/quizzes")
+      .then((data) => {
+        if (!cancelled) setQuizzes((data.quizzes || []).slice(0, 4));
+      })
+      .catch(() => {
+        if (!cancelled) setQuizzes([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   return (
     <main className="app home-page">
@@ -47,14 +35,14 @@ export default function HomePage() {
       </div>
 
       <header className="home-hero">
-        <p className="chip home-chip">MS SQL Server</p>
+        <p className="chip home-chip">Платформа</p>
         <h1 className="home-title">
-          Тренировочный
-          <span className="home-title-accent"> тест</span>
+          Тесты и
+          <span className="home-title-accent"> состязания</span>
         </h1>
         <p className="home-lead">
-          Готовьтесь к экзамену в соло-режиме или устройте дуэль с другом в реальном
-          времени.
+          Соберите свой набор вопросов, готовьтесь к контрольной или вызовите друга
+          на дуэль с таймером и очками.
         </p>
 
         {user && (
@@ -73,45 +61,87 @@ export default function HomePage() {
         )}
       </header>
 
-      <section className="home-features" aria-label="Режимы">
-        {FEATURES.map((feature) => (
-          <article
-            key={feature.id}
-            className={`home-feature-card home-feature-${feature.accent}`}
-          >
-            <span className="home-feature-icon" aria-hidden="true">
-              {feature.icon}
-            </span>
-            <h2>{feature.title}</h2>
-            <p>{feature.desc}</p>
-            {feature.id === "duel" ? (
-              user ? (
-                <div className="home-feature-actions">
-                  <Button variant="primary" to="/multi/create">
-                    Создать
-                  </Button>
-                  <Button variant="secondary" to="/multi/join">
-                    Войти
-                  </Button>
-                </div>
-              ) : (
-                <div className="home-feature-actions">
-                  <Button variant="primary" to="/login">
-                    Войти
-                  </Button>
-                  <Button variant="secondary" to="/register">
-                    Регистрация
-                  </Button>
-                </div>
-              )
-            ) : (
-              <Button variant={feature.variant} to={feature.to}>
-                {feature.cta}
+      <section className="home-features" aria-label="Действия">
+        <article className="home-feature-card home-feature-solo">
+          <span className="home-feature-icon" aria-hidden="true">
+            📘
+          </span>
+          <h2>Мои тесты</h2>
+          <p>Создавайте, редактируйте и готовьтесь по своим вопросам.</p>
+          <div className="home-feature-actions">
+            <Button variant="primary" to={user ? "/me/quizzes" : "/login"}>
+              {user ? "Кабинет" : "Войти"}
+            </Button>
+            {user && (
+              <Button variant="secondary" to="/me/quizzes">
+                Создать
               </Button>
             )}
-          </article>
-        ))}
+          </div>
+        </article>
+
+        <article className="home-feature-card home-feature-duel">
+          <span className="home-feature-icon" aria-hidden="true">
+            ⚔️
+          </span>
+          <h2>Состязание</h2>
+          <p>Дуэль на выбранном тесте: таймер, очки за скорость, разбор раунда.</p>
+          <div className="home-feature-actions">
+            {user ? (
+              <>
+                <Button variant="primary" to="/multi/create">
+                  Создать
+                </Button>
+                <Button variant="secondary" to="/multi/join">
+                  Войти
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="primary" to="/login">
+                  Войти
+                </Button>
+                <Button variant="secondary" to="/register">
+                  Регистрация
+                </Button>
+              </>
+            )}
+          </div>
+        </article>
+
+        <article className="home-feature-card home-feature-answers">
+          <span className="home-feature-icon" aria-hidden="true">
+            ✓
+          </span>
+          <h2>Подготовка</h2>
+          <p>Соло с мгновенной проверкой и справочник правильных ответов вашего теста.</p>
+          <Button variant="secondary" to={user ? "/me/quizzes" : "/register"}>
+            {user ? "Открыть тесты" : "Начать"}
+          </Button>
+        </article>
       </section>
+
+      {user && quizzes.length > 0 && (
+        <section className="home-recent">
+          <h2>Недавние тесты</h2>
+          <div className="home-recent-list">
+            {quizzes.map((quiz) => (
+              <article className="home-recent-card" key={quiz.id}>
+                <div>
+                  <strong>{quiz.title}</strong>
+                  <p className="muted">
+                    {quiz.questionCount} вопр. ·{" "}
+                    {quiz.status === "published" ? "опубликован" : "черновик"}
+                  </p>
+                </div>
+                <Button variant="secondary" to={`/q/${quiz.id}/study`}>
+                  Соло
+                </Button>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {user && (
         <footer className="home-footer">

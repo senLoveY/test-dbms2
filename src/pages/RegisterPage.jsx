@@ -30,7 +30,7 @@ export default function RegisterPage() {
   return (
     <PageLayout className="intro">
       <h1>Регистрация</h1>
-      <p className="subtitle">Создайте аккаунт для мультиплеера.</p>
+      <p className="subtitle">Аккаунт нужен, чтобы хранить тесты и состязаться.</p>
       <form className="auth-form" onSubmit={handleSubmit}>
         <label>
           Никнейм

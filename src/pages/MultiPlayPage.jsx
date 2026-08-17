@@ -246,6 +246,7 @@ export default function MultiPlayPage() {
       <section className="card quiz">
         <div className="top-row">
           <p className="counter">
+            {state?.quiz?.title ? `${state.quiz.title} · ` : ""}
             Вопрос {(room?.current_index ?? 0) + 1} / {questionTotal}
           </p>
           <p className="timer">⏱ {secondsLeft} с</p>
