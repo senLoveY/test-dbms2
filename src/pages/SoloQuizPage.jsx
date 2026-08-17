@@ -1,23 +1,26 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+import AuthGate from "../components/AuthGate.jsx";
 import Button from "../components/Button.jsx";
 import PageLayout from "../components/PageLayout.jsx";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import { apiRequest } from "../lib/api.js";
 import { gradeAnswerDetailed } from "../../lib/gameLogic.js";
-import { questions as sourceQuestions } from "../questions.js";
 import { arraysEqualAsSet, shuffleArray } from "../lib/quiz.js";
 
-function prepareQuestionsSet() {
+function prepareQuestionsSet(sourceQuestions) {
   return shuffleArray(sourceQuestions).map((question) => {
     const optionsWithFlags = question.options.map((optionText, optionIndex) => ({
       text: optionText,
       isCorrect: question.correct.includes(optionIndex),
-      originalIndex: optionIndex,
     }));
-    return { ...question, options: shuffleArray(optionsWithFlags) };
+    return {
+      id: question.id,
+      type: question.type,
+      text: question.text,
+      options: shuffleArray(optionsWithFlags),
+    };
   });
-}
-
-function selectedToOriginal(question, selected) {
-  return selected.map((index) => question.options[index].originalIndex);
 }
 
 function getCorrectIndexes(question) {
@@ -25,6 +28,14 @@ function getCorrectIndexes(question) {
     if (option.isCorrect) acc.push(index);
     return acc;
   }, []);
+}
+
+function toGradeQuestion(question) {
+  return {
+    type: question.type,
+    correct: getCorrectIndexes(question),
+    options: question.options.map((option) => option.text),
+  };
 }
 
 function isQuestionCorrect(question, selected) {
@@ -44,15 +55,47 @@ function getAnswerState(question, selected) {
 }
 
 export default function SoloQuizPage() {
-  const [questions, setQuestions] = useState(() => prepareQuestionsSet());
+  const { id } = useParams();
+  const { user, loading: authLoading } = useAuth();
+  const [quiz, setQuiz] = useState(null);
+  const [attempts, setAttempts] = useState([]);
+  const [loadError, setLoadError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [questions, setQuestions] = useState([]);
   const [started, setStarted] = useState(false);
   const [finished, setFinished] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [checkedMap, setCheckedMap] = useState({});
-  const [attempts, setAttempts] = useState(
-    Number(localStorage.getItem("quizAttempts") || 0)
-  );
+
+  useEffect(() => {
+    if (!user || !id) return undefined;
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setLoadError("");
+      try {
+        const [{ quiz: nextQuiz }, attemptData] = await Promise.all([
+          apiRequest(`/api/quizzes/${id}`),
+          apiRequest(`/api/quizzes/${id}/attempt`).catch(() => ({ attempts: [] })),
+        ]);
+        if (cancelled) return;
+        setQuiz(nextQuiz);
+        setAttempts(attemptData.attempts || []);
+        setQuestions(prepareQuestionsSet(nextQuiz.questions || []));
+      } catch (err) {
+        if (!cancelled) setLoadError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, id]);
 
   const currentQuestion = questions[currentIndex];
   const selected = answers[currentQuestion?.id] || [];
@@ -62,10 +105,7 @@ export default function SoloQuizPage() {
     : [];
   const currentGrade =
     currentQuestion && currentChecked
-      ? gradeAnswerDetailed(
-          currentQuestion.id,
-          selectedToOriginal(currentQuestion, selected)
-        )
+      ? gradeAnswerDetailed(toGradeQuestion(currentQuestion), selected)
       : null;
   const score = useMemo(
     () =>
@@ -75,7 +115,9 @@ export default function SoloQuizPage() {
       }, 0),
     [answers, questions]
   );
-  const progressPercent = Math.round(((currentIndex + 1) / questions.length) * 100);
+  const progressPercent = questions.length
+    ? Math.round(((currentIndex + 1) / questions.length) * 100)
+    : 0;
   const isLastQuestion = currentIndex === questions.length - 1;
 
   function handleOptionToggle(optionIndex) {
@@ -98,12 +140,26 @@ export default function SoloQuizPage() {
     setCheckedMap((prev) => ({ ...prev, [currentQuestion.id]: true }));
   }
 
-  function handleNext() {
+  async function handleNext() {
     if (!selected.length || !currentChecked) return;
     if (isLastQuestion) {
-      const nextAttempts = attempts + 1;
-      localStorage.setItem("quizAttempts", String(nextAttempts));
-      setAttempts(nextAttempts);
+      try {
+        await apiRequest(`/api/quizzes/${id}/attempt`, {
+          method: "POST",
+          body: { score, total: questions.length },
+        });
+        setAttempts((prev) => [
+          {
+            id: `local-${Date.now()}`,
+            score,
+            total: questions.length,
+            created_at: new Date().toISOString(),
+          },
+          ...prev,
+        ]);
+      } catch (err) {
+        console.error(err);
+      }
       setFinished(true);
       return;
     }
@@ -116,31 +172,64 @@ export default function SoloQuizPage() {
     setCurrentIndex(0);
     setAnswers({});
     setCheckedMap({});
-    setQuestions(prepareQuestionsSet());
+    setQuestions(prepareQuestionsSet(quiz.questions || []));
+  }
+
+  if (authLoading || loading) {
+    return (
+      <PageLayout className="intro">
+        <p className="muted">Загрузка...</p>
+      </PageLayout>
+    );
+  }
+
+  if (!user) {
+    return <AuthGate message="Войдите, чтобы готовиться по своему тесту." />;
+  }
+
+  if (loadError || !quiz) {
+    return (
+      <PageLayout className="intro">
+        <p className="live-result wrong">{loadError || "Тест не найден"}</p>
+        <Button variant="primary" to="/me/quizzes" block>
+          К тестам
+        </Button>
+      </PageLayout>
+    );
+  }
+
+  if (!quiz.questions?.length) {
+    return (
+      <PageLayout className="intro">
+        <h1>{quiz.title}</h1>
+        <p className="subtitle">Добавьте вопросы в редакторе, затем можно готовиться.</p>
+        <Button variant="primary" to={`/me/quizzes/${quiz.id}/edit`} block>
+          Открыть редактор
+        </Button>
+      </PageLayout>
+    );
   }
 
   if (!started) {
     return (
       <PageLayout className="intro">
-        <p className="chip">Соло</p>
-        <h1>Соло-тест</h1>
-        <p className="subtitle">20 вопросов, по одному на экран.</p>
+        <p className="chip">Подготовка</p>
+        <h1>{quiz.title}</h1>
+        <p className="subtitle">
+          {quiz.questions.length} вопросов, разбор сразу после ответа.
+        </p>
         <div className="stack stack-center">
-          <Button
-            variant="primary"
-            block
-            onClick={() => {
-              setQuestions(prepareQuestionsSet());
-              setStarted(true);
-            }}
-          >
+          <Button variant="primary" block onClick={handleRestart}>
             Начать
           </Button>
-          <Button variant="secondary" to="/" block>
-            На главную
+          <Button variant="secondary" to={`/me/quizzes/${quiz.id}/review`} block>
+            Справочник
+          </Button>
+          <Button variant="secondary" to="/me/quizzes" block>
+            К тестам
           </Button>
         </div>
-        <p className="muted">Завершённых попыток: {attempts}</p>
+        <p className="muted">Завершённых попыток: {attempts.length}</p>
       </PageLayout>
     );
   }
@@ -158,24 +247,26 @@ export default function SoloQuizPage() {
             <Button variant="primary" block onClick={handleRestart}>
               Пройти заново
             </Button>
-            <Button variant="secondary" to="/answers" block>
-              Открыть ответы
+            {quiz.status === "published" && (
+              <Button variant="accent" to={`/multi/create?quiz=${quiz.id}`} block>
+                Вызвать на дуэль
+              </Button>
+            )}
+            <Button variant="secondary" to={`/me/quizzes/${quiz.id}/review`} block>
+              Справочник
             </Button>
-            <Button variant="secondary" to="/" block>
-              На главную
+            <Button variant="secondary" to="/me/quizzes" block>
+              К тестам
             </Button>
           </div>
         </section>
         <section className="card review">
           <h2>Разбор ответов</h2>
           <div className="review-list">
-            {questions.map((question) => {
+            {questions.map((question, index) => {
               const userSelected = answers[question.id] || [];
               const states = getAnswerState(question, userSelected);
-              const grade = gradeAnswerDetailed(
-                question.id,
-                selectedToOriginal(question, userSelected)
-              );
+              const grade = gradeAnswerDetailed(toGradeQuestion(question), userSelected);
               const badgeClass = grade.isFullyCorrect
                 ? "badge right"
                 : grade.isPartial
@@ -190,13 +281,13 @@ export default function SoloQuizPage() {
                 <article className="review-item" key={question.id}>
                   <div className="review-header">
                     <h3>
-                      {question.id}. {question.text}
+                      {index + 1}. {question.text}
                     </h3>
                     <span className={badgeClass}>{badgeText}</span>
                   </div>
                   <ul className="review-options">
                     {question.options.map((option, idx) => (
-                      <li key={option.text} className={`state-${states[idx]}`}>
+                      <li key={`${question.id}-${idx}`} className={`state-${states[idx]}`}>
                         {option.text}
                       </li>
                     ))}
@@ -217,7 +308,7 @@ export default function SoloQuizPage() {
           <p className="counter">
             Вопрос {currentIndex + 1} / {questions.length}
           </p>
-          <Button variant="secondary" to="/">
+          <Button variant="secondary" to="/me/quizzes">
             Выход
           </Button>
         </div>
@@ -253,7 +344,7 @@ export default function SoloQuizPage() {
             const answerState = currentChecked ? `state-${currentAnswerStates[idx]}` : "";
             return (
               <label
-                key={option.text}
+                key={`${currentQuestion.id}-${idx}`}
                 className={checked ? `option active ${answerState}` : `option ${answerState}`}
               >
                 <input

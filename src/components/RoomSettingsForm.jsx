@@ -2,6 +2,7 @@ import {
   DEFAULT_ROOM_SETTINGS,
   ROOM_PRESETS,
   SETTINGS_OPTIONS,
+  questionCountChoices,
 } from "../../lib/roomSettings.js";
 
 function SelectSetting({ label, value, options, onChange, formatOption }) {
@@ -46,6 +47,7 @@ export default function RoomSettingsForm({
   onPreset,
   disabled = false,
   showPresets = true,
+  maxQuestions,
 }) {
   function set(key, rawValue) {
     const numericKeys = [
@@ -69,7 +71,16 @@ export default function RoomSettingsForm({
               type="button"
               className="preset-chip"
               disabled={disabled}
-              onClick={() => onPreset?.(preset)}
+              onClick={() => {
+                const next = { ...preset };
+                if (maxQuestions) {
+                  next.questionCount = Math.min(
+                    next.questionCount || DEFAULT_ROOM_SETTINGS.questionCount,
+                    maxQuestions
+                  );
+                }
+                onPreset?.(next);
+              }}
             >
               {preset.label}
             </button>
@@ -89,8 +100,8 @@ export default function RoomSettingsForm({
         />
         <SelectSetting
           label="Число вопросов"
-          value={settings.questionCount}
-          options={SETTINGS_OPTIONS.questionCount.map((n) => ({
+          value={Math.min(settings.questionCount, maxQuestions || settings.questionCount)}
+          options={questionCountChoices(maxQuestions).map((n) => ({
             value: n,
             label: `${n}`,
           }))}

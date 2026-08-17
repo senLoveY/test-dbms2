@@ -29,7 +29,7 @@ export default function LoginPage() {
   return (
     <PageLayout className="intro">
       <h1>Вход</h1>
-      <p className="subtitle">Войдите, чтобы играть в дуэль с другом.</p>
+      <p className="subtitle">Войдите, чтобы создавать тесты и играть с другом.</p>
       <form className="auth-form" onSubmit={handleSubmit}>
         <label>
           Email
