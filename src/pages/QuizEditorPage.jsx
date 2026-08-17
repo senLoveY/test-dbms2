@@ -6,6 +6,7 @@ import PageLayout from "../components/PageLayout.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { apiRequest } from "../lib/api.js";
 import {
+  GENERATE_LIMITS,
   QUIZ_LIMITS,
   createEmptyQuestion,
   getPublishErrors,
@@ -95,6 +96,10 @@ export default function QuizEditorPage() {
   const [status, setStatus] = useState("draft");
   const [questions, setQuestions] = useState([createEmptyQuestion()]);
   const [importText, setImportText] = useState("");
+  const [sourceText, setSourceText] = useState("");
+  const [generateCount, setGenerateCount] = useState(5);
+  const [allowMultiple, setAllowMultiple] = useState(true);
+  const [generating, setGenerating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -204,6 +209,41 @@ export default function QuizEditorPage() {
     }
   }
 
+  function isBlankQuestion(question) {
+    return !question.text?.trim() && (question.options || []).every((option) => !String(option).trim());
+  }
+
+  async function handleGenerate() {
+    setError("");
+    setNotice("");
+    setGenerating(true);
+    try {
+      const data = await apiRequest(`/api/quizzes/${id}/generate`, {
+        method: "POST",
+        body: {
+          source: sourceText,
+          count: generateCount,
+          allowMultiple,
+        },
+      });
+      const generated = data.questions || [];
+      setQuestions((prev) => {
+        const kept = prev.filter((question) => !isBlankQuestion(question));
+        return [...kept, ...generated].slice(0, QUIZ_LIMITS.maxQuestions);
+      });
+      if (data.title && (!title || title === "Новый тест" || title === "Без названия")) {
+        setTitle(data.title);
+      }
+      setNotice(
+        `Сгенерировано вопросов: ${generated.length}. Проверьте ответы и сохраните черновик.`
+      );
+    } catch (err) {
+      setError(err.message || "Не удалось сгенерировать тест");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   return (
     <PageLayout className="quiz-editor" wide centered={false}>
       <header className="cabinet-header">
@@ -253,6 +293,54 @@ export default function QuizEditorPage() {
           />
         </label>
       </form>
+
+      <section className="import-box">
+        <h2>Сгенерировать из текста</h2>
+        <p className="muted">
+          Вставьте фрагмент методички или конспекта. Модель соберёт черновик — ответы нужно
+          проверить перед публикацией.
+        </p>
+        <textarea
+          value={sourceText}
+          maxLength={GENERATE_LIMITS.maxSourceChars}
+          onChange={(e) => setSourceText(e.target.value)}
+          rows={7}
+          placeholder="Вставьте учебный текст..."
+        />
+        <div className="generate-row">
+          <label className="setting-row">
+            <span>Сколько вопросов</span>
+            <select
+              value={generateCount}
+              onChange={(e) => setGenerateCount(Number(e.target.value))}
+            >
+              {[3, 5, 8].map((count) => (
+                <option key={count} value={count}>
+                  {count}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="setting-row setting-toggle">
+            <span>Можно несколько правильных</span>
+            <input
+              type="checkbox"
+              checked={allowMultiple}
+              onChange={(e) => setAllowMultiple(e.target.checked)}
+            />
+          </label>
+        </div>
+        <p className="muted">
+          {sourceText.length} / {GENERATE_LIMITS.maxSourceChars} символов
+        </p>
+        <Button
+          variant="primary"
+          onClick={handleGenerate}
+          disabled={generating || sourceText.trim().length < 40}
+        >
+          {generating ? "Генерация..." : "Сгенерировать"}
+        </Button>
+      </section>
 
       <section className="import-box">
         <h2>Импорт JSON</h2>

@@ -1532,6 +1532,19 @@ a.btn-danger:focus-visible {
   gap: 10px;
 }
 
+.generate-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 200px) 1fr;
+  gap: 16px;
+  align-items: end;
+}
+
+@media (max-width: 560px) {
+  .generate-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .editor-options {
   display: grid;
   gap: 8px;
