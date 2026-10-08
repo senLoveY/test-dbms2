@@ -510,6 +510,11 @@ section > .section-title {
   text-decoration-color: currentColor;
 }
 
+.input-capped {
+  max-height: min(320px, 45vh);
+  overflow-y: auto;
+}
+
 .file-btn {
   display: inline-block;
   margin-top: 10px;
@@ -1095,6 +1100,13 @@ input:-webkit-autofill {
 
 .row-item:hover {
   background: linear-gradient(90deg, transparent, var(--paper-2) 20%, var(--paper-2) 80%, transparent);
+}
+
+/* The entry animation makes each row its own stacking context; lift the row
+   whose menu is open so the dropdown is not covered by the rows below. */
+.row-item:has(.menu-list) {
+  position: relative;
+  z-index: 5;
 }
 
 .row-item.is-busy {

@@ -111,7 +111,7 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
         />
       </label>
       <AutoTextarea
-        className="input"
+        className="input input-capped"
         minRows={8}
         value={source}
         maxLength={GENERATE_LIMITS.maxSourceChars}
@@ -193,7 +193,7 @@ function ImportDialog({ open, onClose, onImport }) {
         <code>type</code>, <code>text</code>, <code>options</code>, <code>correct</code>.
       </p>
       <AutoTextarea
-        className="input input-mono"
+        className="input input-mono input-capped"
         minRows={8}
         value={text}
         onChange={(e) => setText(e.target.value)}
