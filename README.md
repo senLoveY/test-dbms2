@@ -69,7 +69,7 @@ npx vercel dev       # фронт + API вместе (рекомендуется
 - `GET /api/quizzes/:id` — тест с вопросами (только автор)
 - `PUT /api/quizzes/:id` — сохранить / опубликовать
 - `DELETE /api/quizzes/:id` — удалить
-- `POST /api/quizzes/:id/generate` — черновик вопросов из текста (DeepSeek)
+- `POST /api/quizzes/:id/generate` — черновик вопросов из текста (DeepSeek). PDF, DOCX и TXT читаются в браузере, на сервер уходит только текст (до 30 000 символов)
 - `POST /api/quizzes/:id/duplicate` — копия
 - `GET|POST /api/quizzes/:id/attempt` — попытки соло
 

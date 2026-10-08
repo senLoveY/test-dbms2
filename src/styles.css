@@ -515,6 +515,11 @@ section > .section-title {
   margin-top: 10px;
 }
 
+.file-btn.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .notice {
   margin-top: 16px;
   padding: 10px 14px;
