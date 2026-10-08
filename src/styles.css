@@ -1309,6 +1309,10 @@ input:-webkit-autofill {
   gap: 16px 32px;
 }
 
+.input-count {
+  width: 96px;
+}
+
 .counter-hint {
   margin-top: -8px;
   font-family: var(--font-mono);
