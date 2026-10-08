@@ -1,110 +1,71 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import AuthGate from "../components/AuthGate.jsx";
+import { Link, useParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
-import PageLayout from "../components/PageLayout.jsx";
-import { useAuth } from "../contexts/AuthContext.jsx";
-import { apiRequest } from "../lib/api.js";
+import PageLayout, { PageHeader } from "../components/PageLayout.jsx";
+import { PageSkeleton } from "../components/Skeleton.jsx";
+import { formatQuestions, pad2 } from "../lib/format.js";
+import { useQuiz } from "../lib/quizStore.js";
 
 export default function QuizReviewPage() {
   const { id } = useParams();
-  const { user, loading: authLoading } = useAuth();
-  const [quiz, setQuiz] = useState(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const { quiz, loading, error } = useQuiz(id);
 
-  useEffect(() => {
-    if (!user || !id) return undefined;
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const data = await apiRequest(`/api/quizzes/${id}`);
-        if (!cancelled) setQuiz(data.quiz);
-      } catch (err) {
-        if (!cancelled) setError(err.message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [user, id]);
-
-  if (authLoading || loading) {
-    return (
-      <PageLayout className="intro">
-        <p className="muted">Загрузка...</p>
-      </PageLayout>
-    );
-  }
-
-  if (!user) {
-    return <AuthGate message="Войдите, чтобы открыть справочник своего теста." />;
-  }
+  if (loading) return <PageSkeleton />;
 
   if (error || !quiz) {
     return (
-      <PageLayout className="intro">
-        <p className="live-result wrong">{error || "Тест не найден"}</p>
-        <Button variant="primary" to="/me/quizzes" block>
-          К тестам
+      <PageLayout width="narrow">
+        <p className="notice notice-bad">{error || "Тест не найден"}</p>
+        <Button variant="secondary" to="/me/quizzes">
+          ← К тестам
         </Button>
       </PageLayout>
     );
   }
 
-  return (
-    <main className="app app-wide">
-      <section className="card page-centered">
-        <p className="chip">Справочник</p>
-        <h1>{quiz.title}</h1>
-        <p className="subtitle">Правильные ответы только для автора теста.</p>
-        <div className="stack stack-center">
-          <Button variant="primary" to={`/q/${quiz.id}/study`} block>
-            Соло
-          </Button>
-          <Button variant="secondary" to={`/me/quizzes/${quiz.id}/edit`} block>
-            Редактор
-          </Button>
-          <Button variant="secondary" to="/me/quizzes" block>
-            К тестам
-          </Button>
-        </div>
-      </section>
+  const questions = quiz.questions || [];
 
-      <section className="card review">
-        <div className="review-list">
-          {(quiz.questions || []).map((question, index) => (
-            <article className="review-item" key={question.id || index}>
-              <div className="review-header">
-                <h3>
-                  {index + 1}. {question.text}
-                </h3>
-                <span className="badge right">
-                  {question.type === "multiple" ? "Несколько" : "Один"}
-                </span>
-              </div>
-              <ul className="review-options">
-                {question.options.map((option, optionIndex) => {
-                  const isCorrect = question.correct.includes(optionIndex);
-                  return (
-                    <li
-                      key={`${question.id}-${optionIndex}`}
-                      className={isCorrect ? "state-right-selected" : "state-neutral"}
-                    >
-                      {option}
-                    </li>
-                  );
-                })}
-              </ul>
-            </article>
-          ))}
-        </div>
-      </section>
-    </main>
+  return (
+    <PageLayout>
+      <Link to="/me/quizzes" className="link-quiet">
+        ← Мои тесты
+      </Link>
+      <PageHeader
+        eyebrow="Ответы · видны только автору"
+        title={quiz.title}
+        lead={formatQuestions(questions.length)}
+        actions={
+          <>
+            <Button variant="secondary" to={`/me/quizzes/${quiz.id}/edit`}>
+              Редактировать
+            </Button>
+            <Button variant="primary" to={`/q/${quiz.id}/study`} disabled={!questions.length}>
+              Пройти соло
+            </Button>
+          </>
+        }
+      />
+
+      <ol className="review">
+        {questions.map((question, index) => (
+          <li className="review-item" key={question.id || index} style={{ "--i": Math.min(index, 12) }}>
+            <div className="review-head">
+              <span className="review-num">{pad2(index + 1)}</span>
+              <p className="review-q">{question.text}</p>
+              <span className="pill">{question.type === "multiple" ? "несколько" : "один"}</span>
+            </div>
+            <ul className="review-options">
+              {question.options.map((option, optionIndex) => (
+                <li
+                  key={optionIndex}
+                  className={question.correct.includes(optionIndex) ? "state-right-selected" : "state-neutral"}
+                >
+                  {option}
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ol>
+    </PageLayout>
   );
 }

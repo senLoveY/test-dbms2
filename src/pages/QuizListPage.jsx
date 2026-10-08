@@ -1,179 +1,212 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import AuthGate from "../components/AuthGate.jsx";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
-import PageLayout from "../components/PageLayout.jsx";
-import { useAuth } from "../contexts/AuthContext.jsx";
+import { useFeedback } from "../components/Feedback.jsx";
+import Menu from "../components/Menu.jsx";
+import PageLayout, { PageHeader } from "../components/PageLayout.jsx";
+import { SkeletonLines } from "../components/Skeleton.jsx";
 import { apiRequest } from "../lib/api.js";
+import { formatDate, formatQuestions, plural } from "../lib/format.js";
+import {
+  getQuizListSnapshot,
+  prefetchQuiz,
+  removeQuiz,
+  restoreQuizzes,
+  upsertQuiz,
+  useQuizzes,
+} from "../lib/quizStore.js";
+
+const SEARCH_THRESHOLD = 6;
 
 export default function QuizListPage() {
-  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [quizzes, setQuizzes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [params, setParams] = useSearchParams();
+  const { toast, confirm } = useFeedback();
+  const { quizzes, loading, error } = useQuizzes();
   const [busyId, setBusyId] = useState("");
+  const [query, setQuery] = useState("");
+  const autoCreated = useRef(false);
 
-  useEffect(() => {
-    if (!user) return undefined;
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setError("");
-      try {
-        const data = await apiRequest("/api/quizzes");
-        if (!cancelled) setQuizzes(data.quizzes || []);
-      } catch (err) {
-        if (!cancelled) setError(err.message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
-
-  if (authLoading) {
-    return (
-      <PageLayout className="intro">
-        <p className="muted">Загрузка...</p>
-      </PageLayout>
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return quizzes;
+    return quizzes.filter(
+      (quiz) =>
+        quiz.title.toLowerCase().includes(q) ||
+        quiz.tags?.some((tag) => tag.includes(q)) ||
+        quiz.description?.toLowerCase().includes(q)
     );
-  }
-
-  if (!user) {
-    return <AuthGate message="Войдите, чтобы управлять своими тестами." />;
-  }
+  }, [quizzes, query]);
 
   async function handleCreate() {
     setBusyId("create");
-    setError("");
     try {
       const { quiz } = await apiRequest("/api/quizzes", {
         method: "POST",
         body: { title: "Новый тест" },
       });
+      upsertQuiz(quiz, { withQuestions: true });
       navigate(`/me/quizzes/${quiz.id}/edit`);
     } catch (err) {
-      setError(err.message);
-    } finally {
+      toast(err.message, { tone: "bad" });
       setBusyId("");
     }
   }
+
+  useEffect(() => {
+    if (params.get("new") && !autoCreated.current) {
+      autoCreated.current = true;
+      setParams({}, { replace: true });
+      handleCreate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
 
   async function handleDuplicate(id) {
     setBusyId(id);
     try {
-      const { quiz } = await apiRequest(`/api/quizzes/${id}/duplicate`, {
-        method: "POST",
-      });
-      setQuizzes((prev) => [quiz, ...prev]);
-      navigate(`/me/quizzes/${quiz.id}/edit`);
+      const { quiz } = await apiRequest(`/api/quizzes/${id}/duplicate`, { method: "POST" });
+      upsertQuiz(quiz, { withQuestions: true });
+      toast("Копия создана");
     } catch (err) {
-      setError(err.message);
+      toast(err.message, { tone: "bad" });
     } finally {
       setBusyId("");
     }
   }
 
-  async function handleDelete(id) {
-    if (!window.confirm("Удалить тест? Это нельзя отменить.")) return;
-    setBusyId(id);
+  async function handleDelete(quiz) {
+    const ok = await confirm({
+      title: `Удалить «${quiz.title}»?`,
+      body: "Тест и история попыток будут удалены без возможности восстановления.",
+      confirmText: "Удалить",
+      tone: "danger",
+    });
+    if (!ok) return;
+
+    const snapshot = getQuizListSnapshot();
+    removeQuiz(quiz.id);
     try {
-      await apiRequest(`/api/quizzes/${id}`, { method: "DELETE" });
-      setQuizzes((prev) => prev.filter((quiz) => quiz.id !== id));
+      await apiRequest(`/api/quizzes/${quiz.id}`, { method: "DELETE" });
+      toast("Тест удалён");
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyId("");
+      restoreQuizzes(snapshot);
+      toast(err.message, { tone: "bad" });
     }
   }
 
   return (
-    <PageLayout className="quiz-cabinet" wide centered={false}>
-      <header className="cabinet-header">
-        <div>
-          <p className="chip">Кабинет</p>
-          <h1>Мои тесты</h1>
-          <p className="subtitle">
-            Создайте набор вопросов, готовьтесь в соло и вызывайте друга на дуэль.
-          </p>
+    <PageLayout width="wide">
+      <PageHeader
+        eyebrow="Кабинет"
+        title="Мои тесты"
+        lead={quizzes.length ? plural(quizzes.length, ["тест", "теста", "тестов"]) : null}
+        actions={
+          <Button variant="primary" onClick={handleCreate} loading={busyId === "create"}>
+            Новый тест
+          </Button>
+        }
+      />
+
+      {quizzes.length >= SEARCH_THRESHOLD && (
+        <div className="toolbar">
+          <input
+            className="input input-search"
+            type="search"
+            placeholder="Поиск по названию или тегу"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Поиск тестов"
+          />
+          <span className="muted">
+            {filtered.length} из {quizzes.length}
+          </span>
         </div>
-        <Button variant="primary" onClick={handleCreate} disabled={busyId === "create"}>
-          {busyId === "create" ? "Создание..." : "Новый тест"}
-        </Button>
-      </header>
-
-      {error && <p className="live-result wrong">{error}</p>}
-      {loading && <p className="muted">Загрузка...</p>}
-
-      {!loading && quizzes.length === 0 && (
-        <section className="empty-state">
-          <h2>Пока пусто</h2>
-          <p className="muted">Соберите первый тест — и сразу можно готовиться или играть.</p>
-        </section>
       )}
 
-      <div className="quiz-grid">
-        {quizzes.map((quiz) => (
-          <article className="quiz-card" key={quiz.id}>
-            <div className="quiz-card-top">
-              <h2>{quiz.title}</h2>
-              <span className={`status-badge status-${quiz.status}`}>
-                {quiz.status === "published" ? "Опубликован" : "Черновик"}
-              </span>
-            </div>
-            {quiz.description && <p>{quiz.description}</p>}
-            <p className="muted">
-              {quiz.questionCount} вопр.
-              {quiz.tags?.length ? ` · ${quiz.tags.join(", ")}` : ""}
-            </p>
-            <div className="quiz-card-actions">
-              <Button variant="primary" to={`/q/${quiz.id}/study`}>
-                Соло
-              </Button>
-              <Button
-                variant="accent"
-                to={
-                  quiz.status === "published" && quiz.questionCount > 0
-                    ? `/multi/create?quiz=${quiz.id}`
-                    : undefined
-                }
-                disabled={quiz.status !== "published" || quiz.questionCount < 1}
-              >
-                Дуэль
-              </Button>
-              <Button variant="secondary" to={`/me/quizzes/${quiz.id}/edit`}>
-                Править
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => handleDuplicate(quiz.id)}
-                disabled={busyId === quiz.id}
-              >
-                Копия
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => handleDelete(quiz.id)}
-                disabled={busyId === quiz.id}
-              >
-                Удалить
-              </Button>
-            </div>
-          </article>
-        ))}
-      </div>
+      {error && <p className="notice notice-bad">{error}</p>}
+      {loading && <SkeletonLines rows={4} />}
 
-      <div className="stack" style={{ maxWidth: 360, marginTop: 28 }}>
-        <Button variant="secondary" to="/" block>
-          На главную
-        </Button>
-      </div>
+      {!loading && !error && quizzes.length === 0 && (
+        <div className="empty">
+          <p className="empty-title">Здесь будут ваши тесты</p>
+          <p className="muted">
+            Создайте тест вручную, импортируйте JSON или вставьте конспект — модель соберёт
+            черновик вопросов.
+          </p>
+          <Button variant="primary" onClick={handleCreate} loading={busyId === "create"}>
+            Создать первый тест
+          </Button>
+        </div>
+      )}
+
+      {filtered.length > 0 && (
+        <ol className="rows rows-table">
+          {filtered.map((quiz, index) => {
+            const playable = quiz.status === "published" && quiz.questionCount > 0;
+            return (
+              <li
+                className={`row-item ${busyId === quiz.id ? "is-busy" : ""}`}
+                key={quiz.id}
+                style={{ "--i": Math.min(index, 10) }}
+                onPointerEnter={() => prefetchQuiz(quiz.id)}
+              >
+                <span className="row-num">{String(index + 1).padStart(2, "0")}</span>
+                <div className="row-main">
+                  <Link to={`/me/quizzes/${quiz.id}/edit`} className="row-title">
+                    {quiz.title}
+                  </Link>
+                  {quiz.description && <p className="row-desc">{quiz.description}</p>}
+                  <p className="row-meta">
+                    <span className={`status status-${quiz.status}`}>
+                      {quiz.status === "published" ? "опубликован" : "черновик"}
+                    </span>
+                    <span>{formatQuestions(quiz.questionCount)}</span>
+                    {quiz.updatedAt && <span>изменён {formatDate(quiz.updatedAt)}</span>}
+                    {quiz.tags?.map((tag) => (
+                      <span className="tag" key={tag}>
+                        {tag}
+                      </span>
+                    ))}
+                  </p>
+                </div>
+                <div className="row-actions">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    to={`/q/${quiz.id}/study`}
+                    disabled={!quiz.questionCount}
+                  >
+                    Соло
+                  </Button>
+                  <Button
+                    variant="accent"
+                    size="sm"
+                    to={`/multi/create?quiz=${quiz.id}`}
+                    disabled={!playable}
+                    title={playable ? undefined : "Сначала опубликуйте тест"}
+                  >
+                    Дуэль
+                  </Button>
+                  <Menu
+                    label={`Действия с тестом «${quiz.title}»`}
+                    items={[
+                      { label: "Редактировать", onClick: () => navigate(`/me/quizzes/${quiz.id}/edit`) },
+                      { label: "Ответы", onClick: () => navigate(`/me/quizzes/${quiz.id}/review`) },
+                      { label: "Сделать копию", onClick: () => handleDuplicate(quiz.id) },
+                      { label: "Удалить", tone: "danger", onClick: () => handleDelete(quiz) },
+                    ]}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+
+      {!loading && quizzes.length > 0 && filtered.length === 0 && (
+        <p className="muted">Ничего не нашлось по запросу «{query}».</p>
+      )}
     </PageLayout>
   );
 }

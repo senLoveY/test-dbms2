@@ -15,8 +15,9 @@
 1. Создайте проект на [supabase.com](https://supabase.com).
 2. В **SQL Editor** выполните скрипт [`supabase/schema.sql`](supabase/schema.sql).
 3. Для уже существующей БД выполните [`supabase/quizzes-migration.sql`](supabase/quizzes-migration.sql) (и при необходимости `room-settings-migration.sql`).
-4. Realtime: нижняя часть `schema.sql` **или** Dashboard → **Database → Publications → supabase_realtime** — таблицы `rooms` и `room_players`.
-5. Скопируйте URL, `anon key` и `service_role key`.
+4. **Обязательно** выполните [`supabase/perf-migration.sql`](supabase/perf-migration.sql) — RPC-функции, на которых работает API (атомарные игровые действия, сохранение теста одной транзакцией), приватные снапшоты вопросов и исправленные RLS-политики для Realtime. Скрипт можно запускать повторно.
+5. Realtime: нижняя часть `schema.sql` **или** Dashboard → **Database → Publications → supabase_realtime** — таблицы `rooms` и `room_players`.
+6. Скопируйте URL, `anon key` и `service_role key`.
 
 ### 2. Переменные окружения
 
@@ -30,6 +31,7 @@ cp .env.example .env
 
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — для фронтенда
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — для API на Vercel
+- `SUPABASE_JWT_SECRET` — *необязательно*. Если проект на старых HS256-ключах, API проверяет токен локально, без запроса в Supabase Auth. С новыми асимметричными ключами (Dashboard → Settings → JWT Keys) проверка и так локальная.
 - `DEEPSEEK_API_KEY` — для генерации вопросов из текста (ключ с [platform.deepseek.com](https://platform.deepseek.com))
 
 **Важно:** URL — только корень проекта (`https://xxx.supabase.co`), **без** `/rest/v1/`.
@@ -73,20 +75,22 @@ npx vercel dev       # фронт + API вместе (рекомендуется
 
 ### Комнаты
 
+Игровые действия возвращают новое состояние комнаты (`{ state }`), так что клиенту не нужен лишний запрос.
+
 - `POST /api/rooms/create` — `{ quizId, settings }`
 - `POST /api/rooms/join` — войти по коду
-- `GET /api/rooms/state?roomId=` — состояние комнаты
+- `GET /api/rooms/state?roomId=` или `?code=` — состояние комнаты
 - `POST /api/game/start` — старт (только хост)
 - `POST /api/game/answer` — отправить ответ
 - `POST /api/game/timeout` — истечение таймера
-- `POST /api/game/advance` — следующий вопрос (хост, после reveal)
+- `POST /api/game/advance` — `{ index }`, следующий вопрос (хост, после reveal)
 - `POST /api/game/end` — досрочно завершить игру (хост)
 - `POST /api/rooms/leave` — выйти из комнаты
 - `POST /api/rooms/settings` — настройки лобби (хост)
 
 Все запросы требуют `Authorization: Bearer <supabase_access_token>`.
 
-При старте дуэли вопросы копируются в комнату (`questions_snapshot`), поэтому правки теста не ломают текущий матч.
+При старте дуэли вопросы копируются в приватную таблицу `room_snapshots`, поэтому правки теста не ломают текущий матч, а правильные ответы недоступны игрокам через Realtime/REST.
 
 ## Скрипты
 

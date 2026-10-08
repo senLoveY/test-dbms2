@@ -1,106 +1,78 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import AuthGate from "../components/AuthGate.jsx";
 import Button from "../components/Button.jsx";
-import PageLayout from "../components/PageLayout.jsx";
-import RoomSettingsForm, {
-  DEFAULT_ROOM_SETTINGS,
-} from "../components/RoomSettingsForm.jsx";
-import { useAuth } from "../contexts/AuthContext.jsx";
+import PageLayout, { PageHeader } from "../components/PageLayout.jsx";
+import RoomSettingsForm, { DEFAULT_ROOM_SETTINGS } from "../components/RoomSettingsForm.jsx";
+import { SkeletonLines } from "../components/Skeleton.jsx";
 import { normalizeRoomSettings } from "../../lib/roomSettings.js";
 import { apiRequest, saveRoomSession } from "../lib/api.js";
+import { formatQuestions } from "../lib/format.js";
+import { useQuizzes } from "../lib/quizStore.js";
 
 export default function MultiCreatePage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const quizFromUrl = params.get("quiz");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [quizzes, setQuizzes] = useState([]);
-  const [quizId, setQuizId] = useState(quizFromUrl || "");
-  const [selectedQuiz, setSelectedQuiz] = useState(null);
+  const { quizzes, loading: quizzesLoading } = useQuizzes();
+  const [quizId, setQuizId] = useState(params.get("quiz") || "");
   const [settings, setSettings] = useState({ ...DEFAULT_ROOM_SETTINGS });
+  const [error, setError] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  const published = quizzes.filter((quiz) => quiz.status === "published" && quiz.questionCount > 0);
+  const selected = published.find((quiz) => quiz.id === quizId) || null;
 
   useEffect(() => {
-    if (!user) return undefined;
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const data = await apiRequest("/api/quizzes");
-        if (cancelled) return;
-        const published = (data.quizzes || []).filter(
-          (quiz) => quiz.status === "published" && quiz.questionCount > 0
-        );
-        setQuizzes(published);
-        const initialId = quizFromUrl || published[0]?.id || "";
-        setQuizId(initialId);
-        setSelectedQuiz(published.find((quiz) => quiz.id === initialId) || null);
-      } catch (err) {
-        if (!cancelled) setError(err.message);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [user, quizFromUrl]);
+    if (!selected && published[0]) setQuizId(published[0].id);
+  }, [selected, published]);
 
   useEffect(() => {
-    const quiz = quizzes.find((item) => item.id === quizId);
-    setSelectedQuiz(quiz || null);
-    if (quiz) {
-      setSettings((prev) => ({
-        ...prev,
-        questionCount: Math.min(prev.questionCount, quiz.questionCount),
-      }));
-    }
-  }, [quizId, quizzes]);
-
-  if (!user) {
-    return <AuthGate message="Войдите, чтобы создать состязание." />;
-  }
+    if (!selected) return;
+    setSettings((prev) => ({
+      ...prev,
+      questionCount: Math.min(prev.questionCount, selected.questionCount),
+    }));
+  }, [selected]);
 
   async function handleCreate() {
-    if (!quizId) {
-      setError("Сначала опубликуйте тест в кабинете");
-      return;
-    }
+    if (!selected) return;
     setError("");
-    setLoading(true);
+    setCreating(true);
     try {
       const { room } = await apiRequest("/api/rooms/create", {
         method: "POST",
-        body: {
-          quizId,
-          settings: normalizeRoomSettings(settings),
-        },
+        body: { quizId: selected.id, settings: normalizeRoomSettings(settings) },
       });
       saveRoomSession(room.code, room.id);
-      navigate(`/multi/lobby/${room.code}`);
+      navigate(`/room/${room.code}`);
     } catch (err) {
       setError(err.message);
-    } finally {
-      setLoading(false);
+      setCreating(false);
     }
   }
 
-  if (!quizzes.length) {
+  if (quizzesLoading) {
     return (
-      <PageLayout className="intro">
-        <h1>Создать комнату</h1>
-        <p className="subtitle">
-          Нужен опубликованный тест с хотя бы одним вопросом.
-        </p>
-        {error && <p className="live-result wrong">{error}</p>}
-        <div className="stack stack-center">
-          <Button variant="primary" to="/me/quizzes" block>
-            К тестам
+      <PageLayout>
+        <PageHeader eyebrow="Дуэль" title="Новая комната" />
+        <SkeletonLines rows={3} />
+      </PageLayout>
+    );
+  }
+
+  if (!published.length) {
+    return (
+      <PageLayout width="narrow">
+        <PageHeader
+          eyebrow="Дуэль"
+          title="Нужен опубликованный тест"
+          lead="Дуэль играется на вашем тесте. Опубликуйте хотя бы один — и возвращайтесь."
+        />
+        <div className="row">
+          <Button variant="primary" to="/me/quizzes">
+            К моим тестам
           </Button>
-          <Button variant="secondary" to="/" block>
-            Назад
+          <Button variant="ghost" to="/multi/join">
+            У меня есть код →
           </Button>
         </div>
       </PageLayout>
@@ -108,44 +80,50 @@ export default function MultiCreatePage() {
   }
 
   return (
-    <PageLayout className="intro page-centered">
-      <h1>Создать комнату</h1>
-      <p className="subtitle">Выберите тест и настройки дуэли — изменить можно в лобби.</p>
-      {error && <p className="live-result wrong">{error}</p>}
-
-      <form className="auth-form" onSubmit={(event) => event.preventDefault()}>
-        <label>
-          Тест
-          <select value={quizId} onChange={(e) => setQuizId(e.target.value)}>
-            {quizzes.map((quiz) => (
-              <option key={quiz.id} value={quiz.id}>
-                {quiz.title} ({quiz.questionCount})
-              </option>
-            ))}
-          </select>
-        </label>
-      </form>
-
-      <RoomSettingsForm
-        settings={settings}
-        maxQuestions={selectedQuiz?.questionCount}
-        onChange={setSettings}
-        onPreset={(preset) => {
-          const { label, ...rest } = preset;
-          const next = { ...DEFAULT_ROOM_SETTINGS, ...rest };
-          if (selectedQuiz) {
-            next.questionCount = Math.min(next.questionCount, selectedQuiz.questionCount);
-          }
-          setSettings(next);
-        }}
+    <PageLayout>
+      <PageHeader
+        eyebrow="Дуэль"
+        title="Новая комната"
+        lead="Выберите тест и правила. Настройки можно поменять в лобби, пока ждёте соперника."
       />
 
-      <div className="stack stack-center">
-        <Button variant="primary" block onClick={handleCreate} disabled={loading}>
-          {loading ? "Создание..." : "Создать комнату"}
-        </Button>
-        <Button variant="secondary" to="/" block>
-          Назад
+      <div className="create-grid">
+        <section>
+          <h2 className="section-title">Тест</h2>
+          <div className="choice-list" role="radiogroup" aria-label="Тест для дуэли">
+            {published.map((quiz) => (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={quiz.id === quizId}
+                key={quiz.id}
+                className={`choice ${quiz.id === quizId ? "is-active" : ""}`}
+                onClick={() => setQuizId(quiz.id)}
+              >
+                <span className="choice-radio" aria-hidden="true" />
+                <span className="choice-body">
+                  <span className="choice-title">{quiz.title}</span>
+                  <span className="choice-meta">{formatQuestions(quiz.questionCount)}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="section-title">Правила</h2>
+          <RoomSettingsForm
+            settings={settings}
+            maxQuestions={selected?.questionCount}
+            onChange={setSettings}
+          />
+        </section>
+      </div>
+
+      {error && <p className="notice notice-bad">{error}</p>}
+      <div className="sticky-actions">
+        <Button variant="accent" size="lg" onClick={handleCreate} loading={creating} disabled={!selected}>
+          Создать комнату
         </Button>
       </div>
     </PageLayout>

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import AuthLayout, { Field } from "../components/AuthLayout.jsx";
 import Button from "../components/Button.jsx";
-import PageLayout from "../components/PageLayout.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
+import { humanizeAuthError } from "../lib/format.js";
 
 export default function RegisterPage() {
   const { signUp } = useAuth();
@@ -12,66 +13,86 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkEmail, setCheckEmail] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await signUp(email, password, username);
-      navigate("/login");
+      const data = await signUp(email, password, username.trim());
+      if (data.session) {
+        navigate("/");
+        return;
+      }
+      setCheckEmail(true);
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      setError(humanizeAuthError(err.message));
     }
+    setLoading(false);
+  }
+
+  if (checkEmail) {
+    return (
+      <AuthLayout
+        title="Проверьте почту"
+        lead={`Мы отправили ссылку для подтверждения на ${email}. После подтверждения можно войти.`}
+      >
+        <Button variant="primary" to="/login">
+          Ко входу
+        </Button>
+      </AuthLayout>
+    );
   }
 
   return (
-    <PageLayout className="intro">
-      <h1>Регистрация</h1>
-      <p className="subtitle">Аккаунт нужен, чтобы хранить тесты и состязаться.</p>
-      <form className="auth-form" onSubmit={handleSubmit}>
-        <label>
-          Никнейм
+    <AuthLayout
+      title="Новый аккаунт"
+      lead="Тесты хранятся в аккаунте, а никнейм увидит соперник в дуэли."
+      footer={
+        <>
+          Уже есть аккаунт? <Link to="/login">Войти</Link>
+        </>
+      }
+    >
+      <form className="form" onSubmit={handleSubmit}>
+        <Field label="Никнейм">
           <input
+            className="input"
+            autoComplete="nickname"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            maxLength={32}
             required
+            autoFocus
           />
-        </label>
-        <label>
-          Email
+        </Field>
+        <Field label="Email">
           <input
+            className="input"
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-        </label>
-        <label>
-          Пароль
+        </Field>
+        <Field label="Пароль" hint="Минимум 6 символов">
           <input
+            className="input"
             type="password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
           />
-        </label>
-        {error && <p className="live-result wrong">{error}</p>}
-        <Button variant="primary" type="submit" block disabled={loading}>
-          {loading ? "Создание..." : "Создать аккаунт"}
+        </Field>
+        {error && <p className="notice notice-bad">{error}</p>}
+        <Button variant="primary" type="submit" size="lg" block loading={loading}>
+          Создать аккаунт
         </Button>
       </form>
-      <p className="muted">
-        Уже есть аккаунт? <Link to="/login">Войти</Link>
-      </p>
-      <div className="stack stack-center">
-        <Button variant="secondary" to="/" block>
-          На главную
-        </Button>
-      </div>
-    </PageLayout>
+    </AuthLayout>
   );
 }

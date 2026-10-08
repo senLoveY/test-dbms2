@@ -6,6 +6,8 @@ async function getAccessToken() {
   return data.session?.access_token ?? null;
 }
 
+const KEEPALIVE_LIMIT = 60_000;
+
 export async function apiRequest(path, options = {}) {
   const token = await getAccessToken();
   const headers = {
@@ -15,29 +17,42 @@ export async function apiRequest(path, options = {}) {
 
   if (token) headers.Authorization = `Bearer ${token}`;
 
+  const body = options.body ? JSON.stringify(options.body) : undefined;
   const response = await fetch(path, {
     ...options,
     headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body,
+    // lets a save finish while the page is closing (browsers cap keepalive bodies at 64 KB)
+    keepalive: Boolean(options.keepalive && (!body || body.length < KEEPALIVE_LIMIT)),
   });
 
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data.error || `Request failed (${response.status})`);
+    const error = new Error(data.error || `Ошибка запроса (${response.status})`);
+    error.status = response.status;
+    throw error;
   }
 
   return data;
 }
 
+function safeSession(action) {
+  try {
+    return action();
+  } catch {
+    return null;
+  }
+}
+
 export function saveRoomSession(code, roomId) {
-  sessionStorage.setItem(`room:${code}`, roomId);
+  safeSession(() => sessionStorage.setItem(`room:${code}`, roomId));
 }
 
 export function loadRoomSession(code) {
-  return sessionStorage.getItem(`room:${code}`);
+  return safeSession(() => sessionStorage.getItem(`room:${code}`));
 }
 
 export function clearRoomSession(code) {
-  sessionStorage.removeItem(`room:${code}`);
+  safeSession(() => sessionStorage.removeItem(`room:${code}`));
 }

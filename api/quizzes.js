@@ -4,6 +4,7 @@ import {
   deleteQuiz,
   duplicateQuiz,
   getQuiz,
+  getQuizMeta,
   listAttempts,
   listQuizzes,
   saveAttempt,
@@ -52,11 +53,13 @@ export default async function handler(req, res) {
 
     if (extra === "generate") {
       if (req.method !== "POST") return methodNotAllowed(res);
-      const owned = await getQuiz(quizId, user.id);
-      if (owned.error) return mapServiceError(res, owned.error);
-
       const { source, count, allowMultiple } = req.body || {};
-      const result = await generateQuizFromText({ source, count, allowMultiple });
+      // The ownership check is cheap; run it alongside the slow model call.
+      const [owned, result] = await Promise.all([
+        getQuizMeta(quizId, user.id),
+        generateQuizFromText({ source, count, allowMultiple }),
+      ]);
+      if (owned.error) return mapServiceError(res, owned.error);
       if (result.error) return sendJson(res, 400, { error: result.error });
       return sendJson(res, 200, result);
     }

@@ -10,10 +10,16 @@ import { getApiParts } from "../lib/apiPath.js";
 import {
   badRequest,
   methodNotAllowed,
+  notFound,
   sendJson,
   serverError,
   unauthorized,
 } from "../lib/http.js";
+
+function sendState(res, result) {
+  if (result.error) return badRequest(res, result.error);
+  return sendJson(res, 200, { room: result.state.room, state: result.state });
+}
 
 export default async function handler(req, res) {
   try {
@@ -21,58 +27,43 @@ export default async function handler(req, res) {
     if (authError) return unauthorized(res, authError);
 
     const [action] = getApiParts(req, "rooms");
-    if (!action) return notFoundAction(res);
+    if (!action) return notFound(res, "Unknown rooms action");
 
     if (action === "state") {
       if (req.method !== "GET") return methodNotAllowed(res);
-      const roomId = req.query.roomId;
-      if (!roomId) return badRequest(res, "roomId is required");
+      const { roomId, code } = req.query;
+      if (!roomId && !code) return badRequest(res, "roomId or code is required");
 
-      const state = await getRoomState(roomId);
-      const isMember = state.players.some((p) => p.user_id === user.id);
-      if (!isMember) return unauthorized(res, "Not a room member");
-      return sendJson(res, 200, state);
+      const result = await getRoomState({ roomId, code }, user.id);
+      if (result.error) return notFound(res, result.error);
+      res.setHeader("Cache-Control", "no-store");
+      return sendJson(res, 200, result.state);
     }
 
     if (req.method !== "POST") return methodNotAllowed(res);
+    const body = req.body || {};
 
     if (action === "create") {
-      const { settings, quizId } = req.body || {};
-      const result = await createRoom(user.id, settings, quizId);
-      if (result.error) return sendJson(res, 400, { error: result.error });
-      return sendJson(res, 200, { room: result.room });
+      return sendState(res, await createRoom(user.id, body.settings, body.quizId));
     }
 
     if (action === "join") {
-      const { code } = req.body || {};
-      if (!code) return badRequest(res, "Room code is required");
-      const result = await joinRoom(code, user.id);
-      if (result.error) return badRequest(res, result.error);
-      return sendJson(res, 200, { room: result.room });
+      if (!body.code) return badRequest(res, "Введите код комнаты");
+      return sendState(res, await joinRoom(body.code, user.id));
     }
 
+    if (!body.roomId) return badRequest(res, "roomId is required");
+
     if (action === "leave") {
-      const { roomId } = req.body || {};
-      if (!roomId) return badRequest(res, "roomId is required");
-      const result = await leaveRoom(roomId, user.id);
-      if (result.error) return badRequest(res, result.error);
-      return sendJson(res, 200, result);
+      return sendJson(res, 200, await leaveRoom(body.roomId, user.id));
     }
 
     if (action === "settings") {
-      const { roomId, settings } = req.body || {};
-      if (!roomId) return badRequest(res, "roomId is required");
-      const result = await updateRoomSettings(roomId, user.id, settings || {});
-      if (result.error) return badRequest(res, result.error);
-      return sendJson(res, 200, result);
+      return sendState(res, await updateRoomSettings(body.roomId, user.id, body.settings || {}));
     }
 
-    return notFoundAction(res);
+    return notFound(res, "Unknown rooms action");
   } catch (error) {
     return serverError(res, error);
   }
-}
-
-function notFoundAction(res) {
-  return sendJson(res, 404, { error: "Unknown rooms action" });
 }

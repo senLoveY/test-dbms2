@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import AuthLayout, { Field } from "../components/AuthLayout.jsx";
 import Button from "../components/Button.jsx";
-import PageLayout from "../components/PageLayout.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
+import { humanizeAuthError } from "../lib/format.js";
 
 export default function LoginPage() {
   const { signIn } = useAuth();
@@ -20,48 +21,48 @@ export default function LoginPage() {
       await signIn(email, password);
       navigate("/");
     } catch (err) {
-      setError(err.message);
-    } finally {
+      setError(humanizeAuthError(err.message));
       setLoading(false);
     }
   }
 
   return (
-    <PageLayout className="intro">
-      <h1>Вход</h1>
-      <p className="subtitle">Войдите, чтобы создавать тесты и играть с другом.</p>
-      <form className="auth-form" onSubmit={handleSubmit}>
-        <label>
-          Email
+    <AuthLayout
+      title="С возвращением"
+      lead="Войдите, чтобы открыть свои тесты и дуэли."
+      footer={
+        <>
+          Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+        </>
+      }
+    >
+      <form className="form" onSubmit={handleSubmit}>
+        <Field label="Email">
           <input
+            className="input"
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoFocus
           />
-        </label>
-        <label>
-          Пароль
+        </Field>
+        <Field label="Пароль">
           <input
+            className="input"
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-        </label>
-        {error && <p className="live-result wrong">{error}</p>}
-        <Button variant="primary" type="submit" block disabled={loading}>
-          {loading ? "Вход..." : "Войти"}
+        </Field>
+        {error && <p className="notice notice-bad">{error}</p>}
+        <Button variant="primary" type="submit" size="lg" block loading={loading}>
+          Войти
         </Button>
       </form>
-      <p className="muted">
-        Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
-      </p>
-      <div className="stack stack-center">
-        <Button variant="secondary" to="/" block>
-          На главную
-        </Button>
-      </div>
-    </PageLayout>
+    </AuthLayout>
   );
 }
