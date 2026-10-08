@@ -1,70 +1,84 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
-import PageLayout from "../components/PageLayout.jsx";
-import { useAuth } from "../contexts/AuthContext.jsx";
+import PageLayout, { PageHeader } from "../components/PageLayout.jsx";
 import { apiRequest, saveRoomSession } from "../lib/api.js";
 
+const CODE_LENGTH = 6;
+const CODE_CHARS = /[^A-HJ-NP-Z2-9]/g;
+
 export default function MultiJoinPage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const [code, setCode] = useState("");
+  const [params] = useSearchParams();
+  const [code, setCode] = useState(() => (params.get("code") || "").toUpperCase().replace(CODE_CHARS, "").slice(0, CODE_LENGTH));
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const autoJoined = useRef(false);
 
-  if (!user) {
-    return (
-      <PageLayout className="intro">
-        <p className="subtitle">Войдите, чтобы войти в комнату.</p>
-        <Button variant="primary" to="/login" block>
-          Войти
-        </Button>
-      </PageLayout>
-    );
-  }
-
-  async function handleJoin(event) {
-    event.preventDefault();
+  async function join(value = code) {
+    if (value.length !== CODE_LENGTH || loading) return;
     setError("");
     setLoading(true);
     try {
       const { room } = await apiRequest("/api/rooms/join", {
         method: "POST",
-        body: { code: code.trim().toUpperCase() },
+        body: { code: value },
       });
       saveRoomSession(room.code, room.id);
-      navigate(`/multi/lobby/${room.code}`);
+      navigate(`/room/${room.code}`);
     } catch (err) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   }
 
+  // Opening an invite link joins straight away
+  useEffect(() => {
+    if (!autoJoined.current && code.length === CODE_LENGTH && params.get("code")) {
+      autoJoined.current = true;
+      join(code);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function onChange(event) {
+    const next = event.target.value.toUpperCase().replace(CODE_CHARS, "").slice(0, CODE_LENGTH);
+    setCode(next);
+    setError("");
+    if (next.length === CODE_LENGTH) join(next);
+  }
+
   return (
-    <PageLayout className="intro">
-      <h1>Войти в комнату</h1>
-      <form className="auth-form" onSubmit={handleJoin}>
-        <label>
-          Код комнаты
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="ABC123"
-            required
-            maxLength={6}
-          />
-        </label>
-        {error && <p className="live-result wrong">{error}</p>}
-        <Button variant="primary" type="submit" block disabled={loading}>
-          {loading ? "Подключение..." : "Войти в комнату"}
+    <PageLayout width="narrow">
+      <PageHeader
+        eyebrow="Дуэль"
+        title="Войти по коду"
+        lead="Шесть символов из лобби соперника. Комната откроется сразу после ввода."
+      />
+      <form
+        className="join-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          join();
+        }}
+      >
+        <input
+          className={`code-input ${error ? "is-invalid" : ""}`}
+          value={code}
+          onChange={onChange}
+          placeholder="ABC123"
+          maxLength={CODE_LENGTH}
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          aria-label="Код комнаты"
+          autoFocus
+        />
+        {error && <p className="notice notice-bad">{error}</p>}
+        <Button variant="primary" size="lg" type="submit" block loading={loading} disabled={code.length !== CODE_LENGTH}>
+          Войти в комнату
         </Button>
       </form>
-      <div className="stack stack-center">
-        <Button variant="secondary" to="/" block>
-          Назад
-        </Button>
-      </div>
     </PageLayout>
   );
 }

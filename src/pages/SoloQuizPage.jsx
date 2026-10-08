@@ -1,198 +1,299 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import AuthGate from "../components/AuthGate.jsx";
+import { Link, useParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
+import OptionList from "../components/OptionList.jsx";
 import PageLayout from "../components/PageLayout.jsx";
-import { useAuth } from "../contexts/AuthContext.jsx";
+import { PageSkeleton } from "../components/Skeleton.jsx";
+import { useHotkeys } from "../hooks/useHotkeys.js";
 import { apiRequest } from "../lib/api.js";
+import { formatDate, formatQuestions, pad2 } from "../lib/format.js";
+import { useQuiz } from "../lib/quizStore.js";
+import { shuffleArray } from "../lib/quiz.js";
 import { gradeAnswerDetailed } from "../../lib/gameLogic.js";
-import { arraysEqualAsSet, shuffleArray } from "../lib/quiz.js";
 
 function prepareQuestionsSet(sourceQuestions) {
   return shuffleArray(sourceQuestions).map((question) => {
-    const optionsWithFlags = question.options.map((optionText, optionIndex) => ({
-      text: optionText,
-      isCorrect: question.correct.includes(optionIndex),
-    }));
+    const options = shuffleArray(
+      question.options.map((text, index) => ({ text, isCorrect: question.correct.includes(index) }))
+    );
     return {
       id: question.id,
       type: question.type,
       text: question.text,
-      options: shuffleArray(optionsWithFlags),
+      options: options.map((option) => option.text),
+      correct: options.reduce((acc, option, index) => (option.isCorrect ? [...acc, index] : acc), []),
     };
   });
 }
 
-function getCorrectIndexes(question) {
-  return question.options.reduce((acc, option, index) => {
-    if (option.isCorrect) acc.push(index);
-    return acc;
-  }, []);
-}
-
-function toGradeQuestion(question) {
-  return {
-    type: question.type,
-    correct: getCorrectIndexes(question),
-    options: question.options.map((option) => option.text),
-  };
-}
-
-function isQuestionCorrect(question, selected) {
-  return arraysEqualAsSet(selected, getCorrectIndexes(question));
-}
-
-function getAnswerState(question, selected) {
+function getAnswerStates(question, selected) {
   const selectedSet = new Set(selected);
-  return question.options.map((option, optionIndex) => {
-    const isSelected = selectedSet.has(optionIndex);
-    const isCorrect = option.isCorrect;
+  return question.options.map((_, index) => {
+    const isSelected = selectedSet.has(index);
+    const isCorrect = question.correct.includes(index);
     if (isCorrect && isSelected) return "right-selected";
-    if (isCorrect && !isSelected) return "right-missed";
-    if (!isCorrect && isSelected) return "wrong-selected";
+    if (isCorrect) return "right-missed";
+    if (isSelected) return "wrong-selected";
     return "neutral";
   });
 }
 
+function verdict(grade) {
+  if (grade.isFullyCorrect) return { tone: "good", text: "Верно" };
+  if (grade.isPartial) return { tone: "partial", text: "Частично — выбраны не все правильные или есть лишние" };
+  return { tone: "bad", text: "Неверно" };
+}
+
+function Intro({ quiz, attempts, onStart }) {
+  const best = attempts.reduce(
+    (acc, attempt) => (attempt.total && attempt.score / attempt.total > acc ? attempt.score / attempt.total : acc),
+    -1
+  );
+
+  return (
+    <PageLayout width="narrow" className="solo-intro">
+      <Link to="/me/quizzes" className="link-quiet">
+        ← Мои тесты
+      </Link>
+      <p className="eyebrow">Подготовка</p>
+      <h1 className="page-title">{quiz.title}</h1>
+      {quiz.description && <p className="lead">{quiz.description}</p>}
+      <dl className="facts">
+        <div>
+          <dt>Вопросов</dt>
+          <dd>{quiz.questions.length}</dd>
+        </div>
+        <div>
+          <dt>Попыток</dt>
+          <dd>{attempts.length}</dd>
+        </div>
+        <div>
+          <dt>Лучший</dt>
+          <dd>{best >= 0 ? `${Math.round(best * 100)}%` : "—"}</dd>
+        </div>
+      </dl>
+      <div className="row">
+        <Button variant="primary" size="lg" onClick={onStart} kbd="↵">
+          Начать
+        </Button>
+        <Button variant="ghost" size="lg" to={`/me/quizzes/${quiz.id}/review`}>
+          Ответы
+        </Button>
+      </div>
+      <p className="muted hint-keys">
+        Отвечайте с клавиатуры: <kbd>1</kbd>–<kbd>9</kbd> — вариант, <kbd>Enter</kbd> — проверить и
+        дальше, <kbd>←</kbd> — назад.
+      </p>
+
+      {attempts.length > 0 && (
+        <section className="section">
+          <h2 className="section-title">Последние попытки</h2>
+          <ul className="attempts">
+            {attempts.slice(0, 6).map((attempt) => {
+              const ratio = attempt.total ? attempt.score / attempt.total : 0;
+              return (
+                <li key={attempt.id}>
+                  <span className="attempt-date">{formatDate(attempt.created_at)}</span>
+                  <span className="attempt-bar">
+                    <span style={{ transform: `scaleX(${ratio})` }} />
+                  </span>
+                  <span className="attempt-score">
+                    {attempt.score}/{attempt.total}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+    </PageLayout>
+  );
+}
+
+function Summary({ quiz, run, answers, onRestart, onRetryWrong }) {
+  const [onlyMistakes, setOnlyMistakes] = useState(false);
+  const graded = run.questions.map((question) => ({
+    question,
+    selected: answers[question.id] || [],
+    grade: gradeAnswerDetailed(question, answers[question.id] || []),
+  }));
+  const score = graded.filter((item) => item.grade.isFullyCorrect).length;
+  const total = graded.length;
+  const percent = total ? Math.round((score / total) * 100) : 0;
+  const mistakes = graded.filter((item) => !item.grade.isFullyCorrect);
+  const shown = onlyMistakes ? mistakes : graded;
+
+  const message =
+    percent === 100 ? "Без единой ошибки." : percent >= 80 ? "Почти идеально." : percent >= 50 ? "Неплохо, есть что подтянуть." : "Стоит пройти ещё раз.";
+
+  return (
+    <PageLayout width="narrow" className="solo-summary">
+      <p className="eyebrow">{run.mode === "mistakes" ? "Работа над ошибками" : "Результат"}</p>
+      <div className="score-hero">
+        <span className="score-big">
+          {score}
+          <span className="score-of">/{total}</span>
+        </span>
+        <span className="score-percent">{percent}%</span>
+      </div>
+      <p className="lead">{message}</p>
+      <div className="meter" aria-hidden="true">
+        <span style={{ transform: `scaleX(${score / Math.max(1, total)})` }} />
+      </div>
+
+      <div className="row">
+        {mistakes.length > 0 && (
+          <Button variant="primary" onClick={() => onRetryWrong(mistakes.map((item) => item.question.id))}>
+            Повторить ошибки ({mistakes.length})
+          </Button>
+        )}
+        <Button variant={mistakes.length ? "secondary" : "primary"} onClick={onRestart}>
+          Пройти заново
+        </Button>
+        {quiz.status === "published" && (
+          <Button variant="accent" to={`/multi/create?quiz=${quiz.id}`}>
+            Вызвать на дуэль
+          </Button>
+        )}
+      </div>
+
+      <section className="section">
+        <div className="section-head">
+          <h2 className="section-title">Разбор</h2>
+          {mistakes.length > 0 && mistakes.length < total && (
+            <button type="button" className="link-btn" onClick={() => setOnlyMistakes((v) => !v)}>
+              {onlyMistakes ? "Показать все" : "Только ошибки"}
+            </button>
+          )}
+        </div>
+        <ol className="review">
+          {shown.map(({ question, selected, grade }) => {
+            const v = verdict(grade);
+            const states = getAnswerStates(question, selected);
+            return (
+              <li className="review-item" key={question.id}>
+                <div className="review-head">
+                  <span className="review-num">{pad2(run.questions.indexOf(question) + 1)}</span>
+                  <p className="review-q">{question.text}</p>
+                  <span className={`pill pill-${v.tone}`}>
+                    {grade.isFullyCorrect ? "верно" : grade.isPartial ? "частично" : "неверно"}
+                  </span>
+                </div>
+                <ul className="review-options">
+                  {question.options.map((option, index) => (
+                    <li key={index} className={`state-${states[index]}`}>
+                      {option}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+    </PageLayout>
+  );
+}
+
 export default function SoloQuizPage() {
   const { id } = useParams();
-  const { user, loading: authLoading } = useAuth();
-  const [quiz, setQuiz] = useState(null);
+  const { quiz, loading, error } = useQuiz(id);
   const [attempts, setAttempts] = useState([]);
-  const [loadError, setLoadError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [questions, setQuestions] = useState([]);
-  const [started, setStarted] = useState(false);
-  const [finished, setFinished] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [phase, setPhase] = useState("intro");
+  const [run, setRun] = useState({ questions: [], mode: "all" });
+  const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [checkedMap, setCheckedMap] = useState({});
+  const [checked, setChecked] = useState({});
 
   useEffect(() => {
-    if (!user || !id) return undefined;
     let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setLoadError("");
-      try {
-        const [{ quiz: nextQuiz }, attemptData] = await Promise.all([
-          apiRequest(`/api/quizzes/${id}`),
-          apiRequest(`/api/quizzes/${id}/attempt`).catch(() => ({ attempts: [] })),
-        ]);
-        if (cancelled) return;
-        setQuiz(nextQuiz);
-        setAttempts(attemptData.attempts || []);
-        setQuestions(prepareQuestionsSet(nextQuiz.questions || []));
-      } catch (err) {
-        if (!cancelled) setLoadError(err.message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
+    apiRequest(`/api/quizzes/${id}/attempt`)
+      .then((data) => !cancelled && setAttempts(data.attempts || []))
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [user, id]);
+  }, [id]);
 
-  const currentQuestion = questions[currentIndex];
-  const selected = answers[currentQuestion?.id] || [];
-  const currentChecked = Boolean(checkedMap[currentQuestion?.id]);
-  const currentAnswerStates = currentQuestion
-    ? getAnswerState(currentQuestion, selected)
-    : [];
-  const currentGrade =
-    currentQuestion && currentChecked
-      ? gradeAnswerDetailed(toGradeQuestion(currentQuestion), selected)
-      : null;
-  const score = useMemo(
-    () =>
-      questions.reduce((acc, question) => {
-        const userSelected = answers[question.id] || [];
-        return isQuestionCorrect(question, userSelected) ? acc + 1 : acc;
-      }, 0),
-    [answers, questions]
+  const question = run.questions[index];
+  const selected = (question && answers[question.id]) || [];
+  const isChecked = Boolean(question && checked[question.id]);
+  const isLast = index === run.questions.length - 1;
+  const grade = useMemo(
+    () => (question && isChecked ? gradeAnswerDetailed(question, selected) : null),
+    [question, isChecked, selected]
   );
-  const progressPercent = questions.length
-    ? Math.round(((currentIndex + 1) / questions.length) * 100)
-    : 0;
-  const isLastQuestion = currentIndex === questions.length - 1;
 
-  function handleOptionToggle(optionIndex) {
-    setCheckedMap((prev) => ({ ...prev, [currentQuestion.id]: false }));
+  function begin(questions, mode) {
+    setRun({ questions: prepareQuestionsSet(questions), mode });
+    setIndex(0);
+    setAnswers({});
+    setChecked({});
+    setPhase("play");
+  }
+
+  function toggle(optionIndex) {
+    if (!question || isChecked || optionIndex >= question.options.length) return;
     setAnswers((prev) => {
-      const previous = prev[currentQuestion.id] || [];
-      if (currentQuestion.type === "single") {
-        return { ...prev, [currentQuestion.id]: [optionIndex] };
-      }
-      const isActive = previous.includes(optionIndex);
-      const next = isActive
-        ? previous.filter((item) => item !== optionIndex)
-        : [...previous, optionIndex].sort((a, b) => a - b);
-      return { ...prev, [currentQuestion.id]: next };
+      const current = prev[question.id] || [];
+      if (question.type === "single") return { ...prev, [question.id]: [optionIndex] };
+      const next = current.includes(optionIndex)
+        ? current.filter((item) => item !== optionIndex)
+        : [...current, optionIndex].sort((a, b) => a - b);
+      return { ...prev, [question.id]: next };
     });
   }
 
-  function handleCheckAnswer() {
-    if (!selected.length) return;
-    setCheckedMap((prev) => ({ ...prev, [currentQuestion.id]: true }));
+  async function finish() {
+    setPhase("done");
+    if (run.mode !== "all") return;
+    const score = run.questions.filter(
+      (q) => gradeAnswerDetailed(q, answers[q.id] || []).isFullyCorrect
+    ).length;
+    const local = {
+      id: `local-${Date.now()}`,
+      score,
+      total: run.questions.length,
+      created_at: new Date().toISOString(),
+    };
+    setAttempts((prev) => [local, ...prev]);
+    apiRequest(`/api/quizzes/${id}/attempt`, {
+      method: "POST",
+      body: { score, total: run.questions.length },
+    }).catch(() => {});
   }
 
-  async function handleNext() {
-    if (!selected.length || !currentChecked) return;
-    if (isLastQuestion) {
-      try {
-        await apiRequest(`/api/quizzes/${id}/attempt`, {
-          method: "POST",
-          body: { score, total: questions.length },
-        });
-        setAttempts((prev) => [
-          {
-            id: `local-${Date.now()}`,
-            score,
-            total: questions.length,
-            created_at: new Date().toISOString(),
-          },
-          ...prev,
-        ]);
-      } catch (err) {
-        console.error(err);
-      }
-      setFinished(true);
+  function primaryAction() {
+    if (!question || !selected.length) return;
+    if (!isChecked) {
+      setChecked((prev) => ({ ...prev, [question.id]: true }));
       return;
     }
-    setCurrentIndex((prev) => prev + 1);
+    if (isLast) finish();
+    else setIndex((value) => value + 1);
   }
 
-  function handleRestart() {
-    setStarted(true);
-    setFinished(false);
-    setCurrentIndex(0);
-    setAnswers({});
-    setCheckedMap({});
-    setQuestions(prepareQuestionsSet(quiz.questions || []));
-  }
+  useHotkeys(
+    phase === "play"
+      ? {
+          digit: toggle,
+          Enter: primaryAction,
+          ArrowRight: () => isChecked && primaryAction(),
+          ArrowLeft: () => setIndex((value) => Math.max(0, value - 1)),
+        }
+      : phase === "intro" && quiz?.questions?.length
+        ? { Enter: () => begin(quiz.questions, "all") }
+        : {}
+  );
 
-  if (authLoading || loading) {
+  if (loading) return <PageSkeleton />;
+
+  if (error || !quiz) {
     return (
-      <PageLayout className="intro">
-        <p className="muted">Загрузка...</p>
-      </PageLayout>
-    );
-  }
-
-  if (!user) {
-    return <AuthGate message="Войдите, чтобы готовиться по своему тесту." />;
-  }
-
-  if (loadError || !quiz) {
-    return (
-      <PageLayout className="intro">
-        <p className="live-result wrong">{loadError || "Тест не найден"}</p>
-        <Button variant="primary" to="/me/quizzes" block>
-          К тестам
+      <PageLayout width="narrow">
+        <p className="notice notice-bad">{error || "Тест не найден"}</p>
+        <Button variant="secondary" to="/me/quizzes">
+          ← К тестам
         </Button>
       </PageLayout>
     );
@@ -200,187 +301,89 @@ export default function SoloQuizPage() {
 
   if (!quiz.questions?.length) {
     return (
-      <PageLayout className="intro">
-        <h1>{quiz.title}</h1>
-        <p className="subtitle">Добавьте вопросы в редакторе, затем можно готовиться.</p>
-        <Button variant="primary" to={`/me/quizzes/${quiz.id}/edit`} block>
+      <PageLayout width="narrow">
+        <p className="eyebrow">Подготовка</p>
+        <h1 className="page-title">{quiz.title}</h1>
+        <p className="lead">В тесте пока нет вопросов.</p>
+        <Button variant="primary" to={`/me/quizzes/${quiz.id}/edit`}>
           Открыть редактор
         </Button>
       </PageLayout>
     );
   }
 
-  if (!started) {
+  if (phase === "intro") {
+    return <Intro quiz={quiz} attempts={attempts} onStart={() => begin(quiz.questions, "all")} />;
+  }
+
+  if (phase === "done") {
     return (
-      <PageLayout className="intro">
-        <p className="chip">Подготовка</p>
-        <h1>{quiz.title}</h1>
-        <p className="subtitle">
-          {quiz.questions.length} вопросов, разбор сразу после ответа.
-        </p>
-        <div className="stack stack-center">
-          <Button variant="primary" block onClick={handleRestart}>
-            Начать
-          </Button>
-          <Button variant="secondary" to={`/me/quizzes/${quiz.id}/review`} block>
-            Справочник
-          </Button>
-          <Button variant="secondary" to="/me/quizzes" block>
-            К тестам
-          </Button>
-        </div>
-        <p className="muted">Завершённых попыток: {attempts.length}</p>
-      </PageLayout>
+      <Summary
+        quiz={quiz}
+        run={run}
+        answers={answers}
+        onRestart={() => begin(quiz.questions, "all")}
+        onRetryWrong={(ids) =>
+          begin(
+            quiz.questions.filter((q) => ids.includes(q.id)),
+            "mistakes"
+          )
+        }
+      />
     );
   }
 
-  if (finished) {
-    return (
-      <main className="app">
-        <section className="card summary page-centered victory-screen">
-          <p className="chip victory-chip">Результат</p>
-          <h1 className="victory-title">Тест завершён</h1>
-          <p className="subtitle">
-            Балл: <b>{score}</b> из <b>{questions.length}</b>
-          </p>
-          <div className="stack stack-center">
-            <Button variant="primary" block onClick={handleRestart}>
-              Пройти заново
-            </Button>
-            {quiz.status === "published" && (
-              <Button variant="accent" to={`/multi/create?quiz=${quiz.id}`} block>
-                Вызвать на дуэль
-              </Button>
-            )}
-            <Button variant="secondary" to={`/me/quizzes/${quiz.id}/review`} block>
-              Справочник
-            </Button>
-            <Button variant="secondary" to="/me/quizzes" block>
-              К тестам
-            </Button>
-          </div>
-        </section>
-        <section className="card review">
-          <h2>Разбор ответов</h2>
-          <div className="review-list">
-            {questions.map((question, index) => {
-              const userSelected = answers[question.id] || [];
-              const states = getAnswerState(question, userSelected);
-              const grade = gradeAnswerDetailed(toGradeQuestion(question), userSelected);
-              const badgeClass = grade.isFullyCorrect
-                ? "badge right"
-                : grade.isPartial
-                  ? "badge partial"
-                  : "badge wrong";
-              const badgeText = grade.isFullyCorrect
-                ? "Верно"
-                : grade.isPartial
-                  ? "Частично"
-                  : "Неверно";
-              return (
-                <article className="review-item" key={question.id}>
-                  <div className="review-header">
-                    <h3>
-                      {index + 1}. {question.text}
-                    </h3>
-                    <span className={badgeClass}>{badgeText}</span>
-                  </div>
-                  <ul className="review-options">
-                    {question.options.map((option, idx) => (
-                      <li key={`${question.id}-${idx}`} className={`state-${states[idx]}`}>
-                        {option.text}
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      </main>
-    );
-  }
+  const v = grade ? verdict(grade) : null;
+  const progress = (index + (isChecked ? 1 : 0)) / run.questions.length;
 
   return (
-    <main className="app">
-      <section className="card quiz">
-        <div className="top-row">
-          <p className="counter">
-            Вопрос {currentIndex + 1} / {questions.length}
-          </p>
-          <Button variant="secondary" to="/me/quizzes">
-            Выход
-          </Button>
-        </div>
-        <div className="progress-wrap" aria-hidden="true">
-          <div className="progress-bar" style={{ width: `${progressPercent}%` }} />
-        </div>
-        <h1>{currentQuestion.text}</h1>
-        <p className="type-tip">
-          {currentQuestion.type === "multiple"
-            ? "Можно выбрать несколько вариантов."
-            : "Один вариант ответа."}
+    <PageLayout width="narrow" className="play">
+      <div className="play-top">
+        <button type="button" className="link-quiet" onClick={() => setPhase("intro")}>
+          ← Выйти
+        </button>
+        <span className="play-counter">
+          {pad2(index + 1)} <span className="muted">/ {pad2(run.questions.length)}</span>
+        </span>
+      </div>
+      <div className="progress" aria-hidden="true">
+        <span style={{ transform: `scaleX(${progress})` }} />
+      </div>
+
+      <div className="question" key={question.id}>
+        <p className="question-type">
+          {question.type === "multiple" ? "Несколько ответов" : "Один ответ"}
         </p>
-        {currentGrade && (
-          <p
-            className={
-              currentGrade.isFullyCorrect
-                ? "live-result right"
-                : currentGrade.isPartial
-                  ? "live-result partial"
-                  : "live-result wrong"
-            }
-          >
-            {currentGrade.isFullyCorrect
-              ? "Верно!"
-              : currentGrade.isPartial
-                ? "Частично верно: выбраны не все правильные варианты или есть лишние."
-                : "Неверно."}
-          </p>
-        )}
-        <div className="options">
-          {currentQuestion.options.map((option, idx) => {
-            const checked = selected.includes(idx);
-            const answerState = currentChecked ? `state-${currentAnswerStates[idx]}` : "";
-            return (
-              <label
-                key={`${currentQuestion.id}-${idx}`}
-                className={checked ? `option active ${answerState}` : `option ${answerState}`}
-              >
-                <input
-                  type={currentQuestion.type === "multiple" ? "checkbox" : "radio"}
-                  checked={checked}
-                  onChange={() => handleOptionToggle(idx)}
-                />
-                <span>{option.text}</span>
-              </label>
-            );
-          })}
-        </div>
-        <div className="actions">
+        <h1 className="question-text">{question.text}</h1>
+
+        <OptionList
+          options={question.options}
+          type={question.type}
+          selected={selected}
+          onToggle={toggle}
+          locked={isChecked}
+          states={isChecked ? getAnswerStates(question, selected) : null}
+        />
+
+        <div className="play-actions">
           <Button
-            variant="secondary"
-            onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-            disabled={currentIndex === 0}
+            variant="ghost"
+            onClick={() => setIndex((value) => Math.max(0, value - 1))}
+            disabled={index === 0}
           >
             Назад
           </Button>
-          <Button
-            variant="accent"
-            onClick={handleCheckAnswer}
-            disabled={!selected.length || currentChecked}
-          >
-            Проверить
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleNext}
-            disabled={!selected.length || !currentChecked}
-          >
-            {isLastQuestion ? "Завершить" : "Далее"}
+          {v && (
+            <p className={`verdict verdict-${v.tone}`} role="status">
+              {v.text}
+            </p>
+          )}
+          <Button variant="primary" onClick={primaryAction} disabled={!selected.length} kbd="↵">
+            {!isChecked ? "Проверить" : isLast ? "Завершить" : "Дальше"}
           </Button>
         </div>
-      </section>
-    </main>
+      </div>
+      <p className="muted play-foot">{formatQuestions(run.questions.length)} · {run.mode === "mistakes" ? "только ошибки" : quiz.title}</p>
+    </PageLayout>
   );
 }
