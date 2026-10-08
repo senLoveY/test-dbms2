@@ -7,7 +7,10 @@ import PageLayout, { PageHeader } from "../components/PageLayout.jsx";
 import { SkeletonLines } from "../components/Skeleton.jsx";
 import { apiRequest } from "../lib/api.js";
 import { formatDate, formatQuestions, plural } from "../lib/format.js";
+import { downloadQuizJson } from "../lib/quizTransfer.js";
+import { parseImportPayload } from "../../lib/quizModel.js";
 import {
+  fetchQuiz,
   getQuizListSnapshot,
   prefetchQuiz,
   removeQuiz,
@@ -26,6 +29,7 @@ export default function QuizListPage() {
   const [busyId, setBusyId] = useState("");
   const [query, setQuery] = useState("");
   const autoCreated = useRef(false);
+  const importInput = useRef(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -38,18 +42,64 @@ export default function QuizListPage() {
     );
   }, [quizzes, query]);
 
-  async function handleCreate() {
-    setBusyId("create");
+  async function handleCreate({ fromFile = false } = {}) {
+    setBusyId(fromFile ? "generate" : "create");
     try {
       const { quiz } = await apiRequest("/api/quizzes", {
         method: "POST",
         body: { title: "Новый тест" },
       });
       upsertQuiz(quiz, { withQuestions: true });
+      navigate(`/me/quizzes/${quiz.id}/edit${fromFile ? "?generate=1" : ""}`);
+    } catch (err) {
+      toast(err.message, { tone: "bad" });
+      setBusyId("");
+    }
+  }
+
+  async function handleImportFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    let parsed;
+    try {
+      parsed = parseImportPayload(await file.text());
+      if (!parsed.questions.length) throw new Error("В файле нет вопросов");
+    } catch (err) {
+      toast(err instanceof SyntaxError ? "Это не похоже на JSON" : err.message, { tone: "bad" });
+      return;
+    }
+
+    setBusyId("import");
+    try {
+      const { quiz: created } = await apiRequest("/api/quizzes", {
+        method: "POST",
+        body: { title: parsed.title || file.name.replace(/\.json$/i, "") },
+      });
+      const { quiz } = await apiRequest(`/api/quizzes/${created.id}`, {
+        method: "PUT",
+        body: {
+          title: created.title,
+          description: parsed.description || "",
+          tags: parsed.tags || [],
+          status: "draft",
+          questions: parsed.questions,
+        },
+      });
+      upsertQuiz(quiz, { withQuestions: true });
       navigate(`/me/quizzes/${quiz.id}/edit`);
     } catch (err) {
       toast(err.message, { tone: "bad" });
       setBusyId("");
+    }
+  }
+
+  async function handleExport(id) {
+    try {
+      downloadQuizJson(await fetchQuiz(id));
+    } catch (err) {
+      toast(err.message, { tone: "bad" });
     }
   }
 
@@ -102,9 +152,32 @@ export default function QuizListPage() {
         title="Мои тесты"
         lead={quizzes.length ? plural(quizzes.length, ["тест", "теста", "тестов"]) : null}
         actions={
-          <Button variant="primary" onClick={handleCreate} loading={busyId === "create"}>
-            Новый тест
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => importInput.current?.click()}
+              loading={busyId === "import"}
+            >
+              Импорт JSON
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => handleCreate({ fromFile: true })}
+              loading={busyId === "generate"}
+            >
+              Из файла
+            </Button>
+            <Button variant="primary" onClick={() => handleCreate()} loading={busyId === "create"}>
+              Новый тест
+            </Button>
+            <input
+              ref={importInput}
+              type="file"
+              accept="application/json,.json"
+              onChange={handleImportFile}
+              hidden
+            />
+          </>
         }
       />
 
@@ -131,10 +204,10 @@ export default function QuizListPage() {
         <div className="empty">
           <p className="empty-title">Здесь будут ваши тесты</p>
           <p className="muted">
-            Создайте тест вручную, импортируйте JSON или вставьте конспект — модель соберёт
+            Создайте тест вручную, импортируйте JSON или загрузите конспект — модель соберёт
             черновик вопросов.
           </p>
-          <Button variant="primary" onClick={handleCreate} loading={busyId === "create"}>
+          <Button variant="primary" onClick={() => handleCreate()} loading={busyId === "create"}>
             Создать первый тест
           </Button>
         </div>
@@ -194,6 +267,7 @@ export default function QuizListPage() {
                       { label: "Редактировать", onClick: () => navigate(`/me/quizzes/${quiz.id}/edit`) },
                       { label: "Ответы", onClick: () => navigate(`/me/quizzes/${quiz.id}/review`) },
                       { label: "Сделать копию", onClick: () => handleDuplicate(quiz.id) },
+                      { label: "Экспорт JSON", onClick: () => handleExport(quiz.id) },
                       { label: "Удалить", tone: "danger", onClick: () => handleDelete(quiz) },
                     ]}
                   />

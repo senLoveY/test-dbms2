@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import AutoTextarea from "../components/AutoTextarea.jsx";
 import Button from "../components/Button.jsx";
 import { useFeedback } from "../components/Feedback.jsx";
@@ -10,8 +10,10 @@ import Segmented from "../components/Segmented.jsx";
 import { PageSkeleton } from "../components/Skeleton.jsx";
 import Switch from "../components/Switch.jsx";
 import { apiRequest } from "../lib/api.js";
+import { SOURCE_FILE_ACCEPT, extractFileText } from "../lib/fileText.js";
 import { formatQuestions, formatTime } from "../lib/format.js";
 import { fetchQuiz, getCachedQuiz, upsertQuiz } from "../lib/quizStore.js";
+import { downloadQuizJson } from "../lib/quizTransfer.js";
 import {
   GENERATE_LIMITS,
   QUIZ_LIMITS,
@@ -47,7 +49,28 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
   const [count, setCount] = useState(5);
   const [allowMultiple, setAllowMultiple] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);
+  const [fileName, setFileName] = useState("");
+  const [clipped, setClipped] = useState(false);
   const [error, setError] = useState("");
+
+  async function readFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setError("");
+    setReading(true);
+    try {
+      const text = await extractFileText(file);
+      setSource(text.slice(0, GENERATE_LIMITS.maxSourceChars));
+      setClipped(text.length > GENERATE_LIMITS.maxSourceChars);
+      setFileName(file.name);
+    } catch (err) {
+      setError(err.message || "Не удалось прочитать файл");
+    } finally {
+      setReading(false);
+    }
+  }
 
   async function handleGenerate() {
     setBusy(true);
@@ -59,6 +82,8 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
       });
       onGenerated(data);
       setSource("");
+      setFileName("");
+      setClipped(false);
       onClose();
     } catch (err) {
       setError(err.message || "Не удалось сгенерировать вопросы");
@@ -70,19 +95,29 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
   const tooShort = source.trim().length < 40;
 
   return (
-    <Modal open={open} onClose={busy ? () => {} : onClose} title="Вопросы из текста" wide>
+    <Modal open={open} onClose={busy ? () => {} : onClose} title="Вопросы из материала" wide>
       <p className="muted">
-        Вставьте фрагмент конспекта или методички. Модель предложит черновик — правильные ответы
-        стоит проверить перед публикацией.
+        Загрузите конспект или методичку (PDF, DOCX, TXT) либо вставьте текст. Модель предложит
+        черновик — правильные ответы стоит проверить перед публикацией.
       </p>
+      <label className={`link-btn file-btn ${busy || reading ? "is-disabled" : ""}`}>
+        {reading ? "Читаем файл…" : fileName ? `Файл: ${fileName} — выбрать другой` : "Выбрать файл"}
+        <input
+          type="file"
+          accept={SOURCE_FILE_ACCEPT}
+          onChange={readFile}
+          disabled={busy || reading}
+          hidden
+        />
+      </label>
       <AutoTextarea
         className="input"
         minRows={8}
         value={source}
         maxLength={GENERATE_LIMITS.maxSourceChars}
         onChange={(e) => setSource(e.target.value)}
-        placeholder="Учебный текст…"
-        disabled={busy}
+        placeholder="…или вставьте учебный текст"
+        disabled={busy || reading}
         autoFocus
       />
       <div className="dialog-grid">
@@ -91,7 +126,7 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
           <Segmented
             label="Сколько вопросов"
             value={count}
-            options={[3, 5, 8].map((n) => ({ value: n, label: String(n) }))}
+            options={[3, 5, 10].map((n) => ({ value: n, label: String(n) }))}
             onChange={(value) => setCount(Number(value))}
             disabled={busy}
           />
@@ -106,11 +141,12 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
       </div>
       <p className="counter-hint">
         {source.length.toLocaleString("ru-RU")} / {GENERATE_LIMITS.maxSourceChars.toLocaleString("ru-RU")}
+        {clipped && " — файл длинный, взято начало"}
       </p>
       {busy && (
         <div className="working" role="status">
           <span className="working-bar" />
-          Составляем вопросы — обычно 10–30 секунд
+          Составляем вопросы — обычно 15–50 секунд
         </div>
       )}
       {error && <p className="notice notice-bad">{error}</p>}
@@ -118,7 +154,7 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
         <Button variant="ghost" onClick={onClose} disabled={busy}>
           Отмена
         </Button>
-        <Button variant="primary" onClick={handleGenerate} loading={busy} disabled={tooShort}>
+        <Button variant="primary" onClick={handleGenerate} loading={busy} disabled={tooShort || reading}>
           Сгенерировать
         </Button>
       </div>
@@ -203,6 +239,7 @@ function SaveIndicator({ state, savedAt, error }) {
 
 export default function QuizEditorPage() {
   const { id } = useParams();
+  const [params, setParams] = useSearchParams();
   const { toast } = useFeedback();
   const cached = getCachedQuiz(id, 15_000);
 
@@ -214,7 +251,7 @@ export default function QuizEditorPage() {
   const [status, setStatus] = useState(cached?.status ?? "draft");
   const [questions, setQuestions] = useState(() => toQuestions(cached?.questions));
   const [focusKey, setFocusKey] = useState(null);
-  const [dialog, setDialog] = useState(null);
+  const [dialog, setDialog] = useState(() => (params.get("generate") ? "generate" : null));
 
   const [saveState, setSaveState] = useState("saved");
   const [saveError, setSaveError] = useState("");
@@ -248,6 +285,11 @@ export default function QuizEditorPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    if (params.get("generate")) setParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const problems = useMemo(
     () =>
@@ -511,10 +553,24 @@ export default function QuizEditorPage() {
             </h2>
             <div className="row row-tight">
               <Button variant="ghost" size="sm" onClick={() => setDialog("generate")}>
-                Из текста
+                Из файла или текста
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setDialog("import")}>
                 Импорт JSON
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  downloadQuizJson({
+                    title,
+                    description,
+                    tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+                    questions,
+                  })
+                }
+              >
+                Экспорт
               </Button>
             </div>
           </div>
