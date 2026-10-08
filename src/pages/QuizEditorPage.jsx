@@ -44,9 +44,12 @@ function toQuestions(list) {
     : [withKey(createEmptyQuestion())];
 }
 
+const COUNT_PRESETS = [5, 10, 20];
+
 function GenerateDialog({ open, onClose, quizId, onGenerated }) {
   const [source, setSource] = useState("");
-  const [count, setCount] = useState(5);
+  const [preset, setPreset] = useState("5");
+  const [customCount, setCustomCount] = useState("15");
   const [allowMultiple, setAllowMultiple] = useState(true);
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
@@ -71,6 +74,11 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
       setReading(false);
     }
   }
+
+  const isCustom = preset === "custom";
+  const count = isCustom ? Number(customCount) : Number(preset);
+  const countValid =
+    Number.isInteger(count) && count >= GENERATE_LIMITS.minCount && count <= GENERATE_LIMITS.maxCount;
 
   async function handleGenerate() {
     setBusy(true);
@@ -125,11 +133,33 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
           <span className="field-label">Сколько вопросов</span>
           <Segmented
             label="Сколько вопросов"
-            value={count}
-            options={[3, 5, 10].map((n) => ({ value: n, label: String(n) }))}
-            onChange={(value) => setCount(Number(value))}
+            value={preset}
+            options={[
+              ...COUNT_PRESETS.map((n) => ({ value: String(n), label: String(n) })),
+              { value: "custom", label: "Своё" },
+            ]}
+            onChange={setPreset}
             disabled={busy}
           />
+          {isCustom && (
+            <input
+              className="input input-count"
+              type="number"
+              inputMode="numeric"
+              min={GENERATE_LIMITS.minCount}
+              max={GENERATE_LIMITS.maxCount}
+              value={customCount}
+              onChange={(e) => setCustomCount(e.target.value)}
+              disabled={busy}
+              aria-label="Своё количество вопросов"
+              autoFocus
+            />
+          )}
+          {isCustom && !countValid && (
+            <span className="field-hint">
+              От {GENERATE_LIMITS.minCount} до {GENERATE_LIMITS.maxCount}
+            </span>
+          )}
         </div>
         <Switch
           label="Несколько правильных"
@@ -146,7 +176,7 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
       {busy && (
         <div className="working" role="status">
           <span className="working-bar" />
-          Составляем вопросы — обычно 15–50 секунд
+          Составляем вопросы — обычно до минуты
         </div>
       )}
       {error && <p className="notice notice-bad">{error}</p>}
@@ -154,7 +184,7 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
         <Button variant="ghost" onClick={onClose} disabled={busy}>
           Отмена
         </Button>
-        <Button variant="primary" onClick={handleGenerate} loading={busy} disabled={tooShort || reading}>
+        <Button variant="primary" onClick={handleGenerate} loading={busy} disabled={tooShort || reading || !countValid}>
           Сгенерировать
         </Button>
       </div>
