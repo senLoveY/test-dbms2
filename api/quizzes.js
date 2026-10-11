@@ -1,5 +1,6 @@
 import { getUserFromRequest } from "../lib/supabaseAdmin.js";
 import {
+  claimGenerationQuota,
   createQuiz,
   deleteQuiz,
   duplicateQuiz,
@@ -12,7 +13,7 @@ import {
   saveAttempt,
   updateQuiz,
 } from "../lib/quizService.js";
-import { generateQuizFromText } from "../lib/quizGenerate.js";
+import { checkGenerationSource, generateQuizFromText } from "../lib/quizGenerate.js";
 import { getApiParts } from "../lib/apiPath.js";
 import {
   forbidden,
@@ -57,12 +58,14 @@ export default async function handler(req, res) {
     if (extra === "generate") {
       if (req.method !== "POST") return methodNotAllowed(res);
       const { source, count, allowMultiple } = req.body || {};
-      // The ownership check is cheap; run it alongside the slow model call.
-      const [owned, result] = await Promise.all([
-        getQuizMeta(quizId, user.id),
-        generateQuizFromText({ source, count, allowMultiple }),
-      ]);
+      // Check ownership and quota before the paid model call, not alongside it.
+      const owned = await getQuizMeta(quizId, user.id);
       if (owned.error) return mapServiceError(res, owned.error);
+      const sourceError = checkGenerationSource(source);
+      if (sourceError) return sendJson(res, 400, { error: sourceError });
+      const quota = await claimGenerationQuota(user.id);
+      if (quota.error) return sendJson(res, 429, { error: quota.error });
+      const result = await generateQuizFromText({ source, count, allowMultiple });
       if (result.error) return sendJson(res, 400, { error: result.error });
       return sendJson(res, 200, result);
     }
