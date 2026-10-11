@@ -2541,6 +2541,136 @@ textarea.qcard-text {
   animation: pop-in 260ms var(--ease-spring);
 }
 
+/* exam */
+
+.exam-note {
+  margin-top: 12px;
+}
+
+.intro-extra {
+  margin-top: 16px;
+}
+
+.exam-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.exam-cell {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 6px;
+  border: 1.5px solid var(--line-2);
+  border-radius: var(--radius-xs);
+  background: var(--card);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+
+.exam-cell.is-answered {
+  border-color: var(--ink);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.exam-cell.is-current {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.exam .question {
+  margin-top: 28px;
+}
+
+/* a school grade circled in red pen */
+.score-percent.score-grade {
+  padding: 0.2em 0.55em;
+  font-size: 56px;
+  line-height: 1;
+}
+
+/* challenge */
+
+.podium-time {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.challenge-author {
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.podium-score .score-of {
+  font-size: 0.6em;
+}
+
+.compare {
+  display: grid;
+  gap: 4px;
+  margin-top: 24px;
+  overflow-x: auto;
+}
+
+.compare-row {
+  display: grid;
+  grid-template-columns: 56px repeat(var(--cols, 6), minmax(56px, 1fr));
+  align-items: center;
+  gap: 4px;
+}
+
+.compare-head {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.compare-name {
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compare-num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.mark {
+  height: 22px;
+  border-radius: var(--radius-xs);
+}
+
+.mark-ok {
+  background: var(--good-soft);
+  box-shadow: inset 0 0 0 1.5px var(--good);
+}
+
+.mark-bad {
+  background: var(--bad-soft);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .hint-keys {
   margin-top: 20px;
   line-height: 2;
