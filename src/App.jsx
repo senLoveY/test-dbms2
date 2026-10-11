@@ -13,6 +13,7 @@ const pages = {
   quizEditor: () => import("./pages/QuizEditorPage.jsx"),
   quizReview: () => import("./pages/QuizReviewPage.jsx"),
   solo: () => import("./pages/SoloQuizPage.jsx"),
+  shared: () => import("./pages/SharedQuizPage.jsx"),
   multiCreate: () => import("./pages/MultiCreatePage.jsx"),
   multiJoin: () => import("./pages/MultiJoinPage.jsx"),
   room: () => import("./pages/RoomPage.jsx"),
@@ -24,6 +25,7 @@ const QuizListPage = lazy(pages.quizList);
 const QuizEditorPage = lazy(pages.quizEditor);
 const QuizReviewPage = lazy(pages.quizReview);
 const SoloQuizPage = lazy(pages.solo);
+const SharedQuizPage = lazy(pages.shared);
 const MultiCreatePage = lazy(pages.multiCreate);
 const MultiJoinPage = lazy(pages.multiJoin);
 const RoomPage = lazy(pages.room);
@@ -79,6 +81,14 @@ export default function App() {
                 element={
                   <Private message="Войдите, чтобы открыть ответы">
                     <QuizReviewPage />
+                  </Private>
+                }
+              />
+              <Route
+                path="/q/:id"
+                element={
+                  <Private message="Войдите, чтобы открыть тест по ссылке">
+                    <SharedQuizPage />
                   </Private>
                 }
               />

@@ -1,13 +1,17 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AuthLayout, { Field } from "../components/AuthLayout.jsx";
 import Button from "../components/Button.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { humanizeAuthError } from "../lib/format.js";
+import { safeNextPath } from "../lib/share.js";
 
 export default function RegisterPage() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const next = safeNextPath(params.get("next"));
+  const nextQuery = params.get("next") ? `?next=${encodeURIComponent(next)}` : "";
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +26,7 @@ export default function RegisterPage() {
     try {
       const data = await signUp(email, password, username.trim());
       if (data.session) {
-        navigate("/");
+        navigate(next, { replace: true });
         return;
       }
       setCheckEmail(true);
@@ -51,7 +55,7 @@ export default function RegisterPage() {
       lead="Тесты хранятся в аккаунте, а никнейм увидит соперник в дуэли."
       footer={
         <>
-          Уже есть аккаунт? <Link to="/login">Войти</Link>
+          Уже есть аккаунт? <Link to={`/login${nextQuery}`}>Войти</Link>
         </>
       }
     >

@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext.jsx";
+import { clearOfflineQuizzes } from "../lib/pwa.js";
 import { clearQuizCache } from "../lib/quizStore.js";
 import { useThemePreference } from "../lib/theme.js";
 import Segmented from "./Segmented.jsx";
@@ -154,6 +155,7 @@ export default function AppShell({ children }) {
   async function handleSignOut() {
     await signOut();
     clearQuizCache();
+    clearOfflineQuizzes();
     navigate("/");
   }
 

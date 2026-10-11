@@ -4,6 +4,7 @@ import {
   getRoomState,
   joinRoom,
   leaveRoom,
+  requestRematch,
   updateRoomSettings,
 } from "../lib/roomService.js";
 import { getApiParts } from "../lib/apiPath.js";
@@ -56,6 +57,10 @@ export default async function handler(req, res) {
 
     if (action === "leave") {
       return sendJson(res, 200, await leaveRoom(body.roomId, user.id));
+    }
+
+    if (action === "rematch") {
+      return sendState(res, await requestRematch(body.roomId, user.id));
     }
 
     if (action === "settings") {

@@ -8,6 +8,7 @@ import { SkeletonLines } from "../components/Skeleton.jsx";
 import { apiRequest } from "../lib/api.js";
 import { formatDate, formatQuestions, plural } from "../lib/format.js";
 import { downloadQuizJson } from "../lib/quizTransfer.js";
+import { quizShareUrl, shareLink } from "../lib/share.js";
 import { parseImportPayload } from "../../lib/quizModel.js";
 import {
   fetchQuiz,
@@ -125,6 +126,49 @@ export default function QuizListPage() {
     }
   }
 
+  async function setVisibility(quiz, visibility) {
+    const { quiz: saved } = await apiRequest(`/api/quizzes/${quiz.id}`, {
+      method: "PUT",
+      body: { visibility },
+    });
+    upsertQuiz(saved, { withQuestions: true });
+  }
+
+  async function handleShare(quiz) {
+    if (quiz.status !== "published") {
+      toast("Сначала опубликуйте тест — черновики по ссылке не открываются", { tone: "bad" });
+      return;
+    }
+    try {
+      if (quiz.visibility !== "unlisted") {
+        setBusyId(quiz.id);
+        await setVisibility(quiz, "unlisted");
+        setBusyId("");
+      }
+      const result = await shareLink({
+        title: quiz.title,
+        text: `Тест «${quiz.title}» — пройди или вызови меня на дуэль`,
+        url: quizShareUrl(quiz.id),
+      });
+      if (result === "copied") toast("Ссылка на тест скопирована");
+    } catch (err) {
+      setBusyId("");
+      toast(err.message || "Не получилось поделиться", { tone: "bad" });
+    }
+  }
+
+  async function handleUnshare(quiz) {
+    setBusyId(quiz.id);
+    try {
+      await setVisibility(quiz, "private");
+      toast("Доступ по ссылке закрыт");
+    } catch (err) {
+      toast(err.message, { tone: "bad" });
+    } finally {
+      setBusyId("");
+    }
+  }
+
   async function handleDelete(quiz) {
     const ok = await confirm({
       title: `Удалить «${quiz.title}»?`,
@@ -235,6 +279,9 @@ export default function QuizListPage() {
                       {quiz.status === "published" ? "опубликован" : "черновик"}
                     </span>
                     <span>{formatQuestions(quiz.questionCount)}</span>
+                    {quiz.visibility === "unlisted" && quiz.status === "published" && (
+                      <span className="pill pill-shared">по ссылке</span>
+                    )}
                     {quiz.updatedAt && <span>изменён {formatDate(quiz.updatedAt)}</span>}
                     {quiz.tags?.map((tag) => (
                       <span className="tag" key={tag}>
@@ -266,6 +313,11 @@ export default function QuizListPage() {
                     items={[
                       { label: "Редактировать", onClick: () => navigate(`/me/quizzes/${quiz.id}/edit`) },
                       { label: "Ответы", onClick: () => navigate(`/me/quizzes/${quiz.id}/review`) },
+                      { label: "Поделиться ссылкой", onClick: () => handleShare(quiz) },
+                      quiz.visibility === "unlisted" && {
+                        label: "Закрыть доступ по ссылке",
+                        onClick: () => handleUnshare(quiz),
+                      },
                       { label: "Сделать копию", onClick: () => handleDuplicate(quiz.id) },
                       { label: "Экспорт JSON", onClick: () => handleExport(quiz.id) },
                       { label: "Удалить", tone: "danger", onClick: () => handleDelete(quiz) },

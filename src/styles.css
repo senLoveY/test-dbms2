@@ -581,6 +581,12 @@ kbd {
   color: var(--ink-3);
 }
 
+.eyebrow-name {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink-2);
+}
+
 .page-title {
   font-family: var(--font-serif);
   font-size: clamp(1.9rem, 4.4vw, 2.6rem);
@@ -752,6 +758,11 @@ section > .section-title {
 .notice-bad {
   color: var(--bad);
   background: var(--bad-soft);
+}
+
+.notice-warn {
+  color: var(--warn);
+  background: var(--warn-soft);
 }
 
 .gate .row,
@@ -1230,6 +1241,12 @@ input:-webkit-autofill {
   border-color: transparent;
   background: var(--bad-soft);
   color: var(--bad);
+}
+
+.pill-shared {
+  border-color: transparent;
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .pill-partial {
@@ -2414,6 +2431,114 @@ textarea.qcard-text {
   font-family: var(--font-mono);
   font-size: 24px;
   font-weight: 500;
+}
+
+/* per-question progress */
+
+.progress-panel {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+
+.stack-bar {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--line);
+}
+
+.stack-bar span {
+  min-width: 4px;
+  transform-origin: left;
+  animation: meter-in 700ms 120ms var(--ease-out) both;
+}
+
+.stack-learned,
+.legend-learned .legend-swatch {
+  background: var(--good);
+}
+
+.stack-learning,
+.legend-learning .legend-swatch {
+  background: var(--accent);
+}
+
+.stack-weak,
+.legend-weak .legend-swatch {
+  background: var(--pen);
+}
+
+.stack-new,
+.legend-new .legend-swatch {
+  background: var(--line-2);
+}
+
+.stack-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+.stack-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.legend-count {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.progress-done {
+  font-size: 15px;
+  color: var(--good);
+}
+
+/* shared quiz landing */
+
+.shared .facts {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.facts dd.facts-text {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.shared-extra {
+  margin-top: 12px;
+}
+
+.shared-note {
+  margin-top: 20px;
+}
+
+.rematch-call {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 28px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  font-weight: 600;
+  animation: pop-in 260ms var(--ease-spring);
 }
 
 .hint-keys {

@@ -13,7 +13,8 @@ import { useAnimatedNumber } from "../hooks/useAnimatedNumber.js";
 import { useHotkeys } from "../hooks/useHotkeys.js";
 import { useRoomState } from "../hooks/useRoomState.js";
 import { normalizeRoomSettings } from "../../lib/roomSettings.js";
-import { clearRoomSession } from "../lib/api.js";
+import { apiRequest, clearRoomSession, saveRoomSession } from "../lib/api.js";
+import { shareLink } from "../lib/share.js";
 import { formatPoints, formatQuestions, pad2 } from "../lib/format.js";
 
 const SETTINGS_SAVE_DELAY_MS = 450;
@@ -156,6 +157,19 @@ function Lobby({ state, userId, code, act, onLeave }) {
   }
 
   const inviteUrl = `${window.location.origin}/multi/join?code=${code}`;
+
+  async function invite() {
+    try {
+      const result = await shareLink({
+        title: `Дуэль: ${state.quiz.title || "тест"}`,
+        text: `Заходи в дуэль «${state.quiz.title || "тест"}», код ${code}`,
+        url: inviteUrl,
+      });
+      if (result === "copied") toast("Ссылка-приглашение скопирована");
+    } catch {
+      toast("Не получилось поделиться", { tone: "bad" });
+    }
+  }
   const ready = players.length >= 2;
 
   useHotkeys({ Enter: () => isHost && ready && !starting && start() });
@@ -178,9 +192,11 @@ function Lobby({ state, userId, code, act, onLeave }) {
           >
             {code}
           </button>
-          <button type="button" className="link-btn" onClick={() => copy(inviteUrl, "Ссылка-приглашение скопирована")}>
-            Скопировать ссылку
-          </button>
+          {players.length < 2 && (
+            <Button variant="accent" size="sm" onClick={invite}>
+              Пригласить
+            </Button>
+          )}
         </div>
       </div>
 
@@ -486,7 +502,9 @@ function Confetti() {
   );
 }
 
-function Result({ state, userId, onExit }) {
+function Result({ state, userId, onExit, onRematch }) {
+  const { toast } = useFeedback();
+  const [pending, setPending] = useState(false);
   const ranked = [...state.players].sort((a, b) => b.score - a.score);
   const alone = ranked.length < 2;
   const draw = !alone && ranked[0].score === ranked[1].score;
@@ -499,6 +517,23 @@ function Result({ state, userId, onExit }) {
       : won
         ? "Вы набрали больше очков."
         : "В этот раз соперник был быстрее.";
+  const rematchCode = state.room.settings?.rematchCode;
+  const canRematch = Boolean(state.room.quiz_id);
+
+  async function rematch() {
+    setPending(true);
+    try {
+      // Not through act(): the response is the new room, which shouldn't render under this URL.
+      const { room } = await apiRequest("/api/rooms/rematch", {
+        method: "POST",
+        body: { roomId: state.room.id },
+      });
+      onRematch(room);
+    } catch (err) {
+      toast(err.message, { tone: "bad" });
+      setPending(false);
+    }
+  }
 
   return (
     <PageLayout width="narrow" className={`result ${won ? "is-win" : ""}`}>
@@ -524,11 +559,23 @@ function Result({ state, userId, onExit }) {
         ))}
       </ol>
 
+      {rematchCode && !alone && (
+        <div className="rematch-call" role="status">
+          <span className="pulse-dot" aria-hidden="true" />
+          <span>Соперник зовёт на реванш</span>
+        </div>
+      )}
+
       <div className="row">
+        {canRematch && (
+          <Button variant="accent" onClick={rematch} loading={pending}>
+            {rematchCode ? "Принять реванш" : "Реванш"}
+          </Button>
+        )}
         <Button variant="primary" onClick={() => onExit("/")}>
           На главную
         </Button>
-        <Button variant="secondary" onClick={() => onExit("/me/quizzes")}>
+        <Button variant="ghost" onClick={() => onExit("/me/quizzes")}>
           Мои тесты
         </Button>
       </div>
@@ -595,7 +642,18 @@ export default function RoomPage() {
     return <Lobby state={state} userId={user.id} code={code} act={act} onLeave={leave} />;
   }
   if (status === "finished") {
-    return <Result state={state} userId={user.id} onExit={exit} />;
+    return (
+      <Result
+        state={state}
+        userId={user.id}
+        onExit={exit}
+        onRematch={(room) => {
+          clearRoomSession(code);
+          saveRoomSession(room.code, room.id);
+          navigate(`/room/${room.code}`);
+        }}
+      />
+    );
   }
   return <Game state={state} userId={user.id} act={act} now={now} onLeave={leave} />;
 }
