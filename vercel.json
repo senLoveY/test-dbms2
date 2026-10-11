@@ -7,10 +7,61 @@
     }
   },
   "rewrites": [
-    { "source": "/api/rooms/:action", "destination": "/api/rooms?action=:action" },
-    { "source": "/api/game/:action", "destination": "/api/game?action=:action" },
-    { "source": "/api/quizzes/:id/:extra", "destination": "/api/quizzes?id=:id&extra=:extra" },
-    { "source": "/api/quizzes/:id", "destination": "/api/quizzes?id=:id" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "source": "/api/rooms/:action",
+      "destination": "/api/rooms?action=:action"
+    },
+    {
+      "source": "/api/game/:action",
+      "destination": "/api/game?action=:action"
+    },
+    {
+      "source": "/api/quizzes/:id/:extra",
+      "destination": "/api/quizzes?id=:id&extra=:extra"
+    },
+    {
+      "source": "/api/quizzes/:id",
+      "destination": "/api/quizzes?id=:id"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'none'"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    }
   ]
 }

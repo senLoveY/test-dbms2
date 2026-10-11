@@ -16,8 +16,9 @@
 2. В **SQL Editor** выполните скрипт [`supabase/schema.sql`](supabase/schema.sql).
 3. Для уже существующей БД выполните [`supabase/quizzes-migration.sql`](supabase/quizzes-migration.sql) (и при необходимости `room-settings-migration.sql`).
 4. **Обязательно** выполните [`supabase/perf-migration.sql`](supabase/perf-migration.sql) — RPC-функции, на которых работает API (атомарные игровые действия, сохранение теста одной транзакцией), приватные снапшоты вопросов и исправленные RLS-политики для Realtime. Скрипт можно запускать повторно.
-5. Realtime: нижняя часть `schema.sql` **или** Dashboard → **Database → Publications → supabase_realtime** — таблицы `rooms` и `room_players`.
-6. Скопируйте URL, `anon key` и `service_role key`.
+5. **Обязательно** выполните [`supabase/security-migration.sql`](supabase/security-migration.sql) — закрывает прямую запись в таблицы в обход API, прячет ответы соперника в дуэли (в том числе из realtime), ограничивает чтение профилей своим и добавляет лимит генерации (20 в час на пользователя). Скрипт можно запускать повторно.
+6. Realtime: нижняя часть `schema.sql` **или** Dashboard → **Database → Publications → supabase_realtime** — таблицы `rooms` и `room_players`.
+7. Скопируйте URL, `anon key` и `service_role key`.
 
 ### 2. Переменные окружения
 
