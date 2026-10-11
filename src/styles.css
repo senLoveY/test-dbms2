@@ -68,11 +68,11 @@
   --rule: rgba(200, 210, 230, 0.05);
   --margin-rule: rgba(255, 90, 106, 0.4);
 
-  --accent: #d9ec3a;
-  --accent-hover: #e6f55c;
+  --accent: #cfe23f;
+  --accent-hover: #dbec5c;
   --accent-ink: #121314;
-  --accent-soft: #2b3010;
-  --accent-fg: #dcf03f;
+  --accent-soft: #262a12;
+  --accent-fg: #d6e85a;
   --pen: #ff5a6a;
 
   --good: #4fc98a;
@@ -85,6 +85,69 @@
   --shadow-pop: 0 1px 0 rgba(0, 0, 0, 0.3), 0 16px 40px -12px rgba(0, 0, 0, 0.7);
   --shadow-sheet: 0 1px 0 rgba(0, 0, 0, 0.25), 0 2px 0 -1px var(--line);
   color-scheme: dark;
+}
+
+/* On dark paper light text can't sit on a highlighter swipe: the marker
+   becomes the text colour instead, with a thin stroke underneath. */
+:root[data-theme="dark"] .display em {
+  color: var(--accent-fg);
+}
+
+:root[data-theme="dark"] .display em::after {
+  bottom: -0.04em;
+  height: 0.06em;
+  border-radius: 1px;
+  transform: none;
+}
+
+:root[data-theme="dark"] .nav-link.active {
+  color: var(--accent-fg);
+}
+
+:root[data-theme="dark"] .nav-link.active::after {
+  bottom: -12px;
+  height: 2px;
+  transform: none;
+}
+
+:root[data-theme="dark"] .link-btn,
+:root[data-theme="dark"] .auth-footer a {
+  color: var(--accent-fg);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--accent-fg) 45%, transparent);
+}
+
+:root[data-theme="dark"] .link-btn:hover {
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--accent-fg);
+}
+
+/* a white slab next to the lime one glares on dark paper */
+:root[data-theme="dark"] .btn-primary {
+  background: #2c2e32;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px #46494f;
+}
+
+:root[data-theme="dark"] .btn-primary:hover:not(:disabled) {
+  background: #36393e;
+}
+
+:root[data-theme="dark"] .option.is-selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 0.5px var(--accent);
+}
+
+:root[data-theme="dark"] .option.is-selected .option-key {
+  border-color: var(--accent);
+}
+
+:root[data-theme="dark"] .code-value:hover,
+:root[data-theme="dark"] .result.is-win .result-title,
+:root[data-theme="dark"] .podium-row.is-first .podium-score {
+  background: none;
+  color: var(--accent-fg);
 }
 
 /* ————————————————————————————————————————————————
