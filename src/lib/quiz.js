@@ -6,3 +6,16 @@ export function shuffleArray(items) {
   }
   return next;
 }
+
+/** Per-option result for review: "right-selected" | "right-missed" | "wrong-selected" | "neutral" */
+export function getAnswerStates(question, selected) {
+  const selectedSet = new Set(selected);
+  return question.options.map((_, index) => {
+    const isSelected = selectedSet.has(index);
+    const isCorrect = question.correct.includes(index);
+    if (isCorrect && isSelected) return "right-selected";
+    if (isCorrect) return "right-missed";
+    if (isSelected) return "wrong-selected";
+    return "neutral";
+  });
+}

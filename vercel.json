@@ -24,6 +24,14 @@
       "destination": "/api/quizzes?id=:id"
     },
     {
+      "source": "/api/challenges/:id/:extra",
+      "destination": "/api/challenges?id=:id&extra=:extra"
+    },
+    {
+      "source": "/api/challenges/:id",
+      "destination": "/api/challenges?id=:id"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

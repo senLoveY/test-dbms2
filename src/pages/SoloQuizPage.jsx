@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
+import ChallengeButton from "../components/ChallengeButton.jsx";
+import { useFeedback } from "../components/Feedback.jsx";
+import ShareResultButton from "../components/ShareResultButton.jsx";
 import OptionList from "../components/OptionList.jsx";
 import PageLayout from "../components/PageLayout.jsx";
 import { PageSkeleton } from "../components/Skeleton.jsx";
@@ -8,14 +11,16 @@ import { useHotkeys } from "../hooks/useHotkeys.js";
 import { apiRequest } from "../lib/api.js";
 import { formatDate, formatQuestions, pad2 } from "../lib/format.js";
 import { useQuiz } from "../lib/quizStore.js";
-import { shuffleArray } from "../lib/quiz.js";
+import { getAnswerStates, shuffleArray } from "../lib/quiz.js";
 import { gradeAnswerDetailed } from "../../lib/gameLogic.js";
 import { buildAttemptAnswers, pickReviewQuestions, summarizeProgress } from "../../lib/progress.js";
+import { examDurationSec, examGrade, formatClock } from "../../lib/exam.js";
 
 const MODE_LABEL = {
   all: "Результат",
   mistakes: "Работа над ошибками",
   review: "Слабые места",
+  exam: "Экзамен",
 };
 
 const PROGRESS_GROUPS = [
@@ -71,25 +76,13 @@ function prepareQuestionsSet(sourceQuestions) {
   });
 }
 
-function getAnswerStates(question, selected) {
-  const selectedSet = new Set(selected);
-  return question.options.map((_, index) => {
-    const isSelected = selectedSet.has(index);
-    const isCorrect = question.correct.includes(index);
-    if (isCorrect && isSelected) return "right-selected";
-    if (isCorrect) return "right-missed";
-    if (isSelected) return "wrong-selected";
-    return "neutral";
-  });
-}
-
 function verdict(grade) {
   if (grade.isFullyCorrect) return { tone: "good", text: "Верно" };
   if (grade.isPartial) return { tone: "partial", text: "Частично — выбраны не все правильные или есть лишние" };
   return { tone: "bad", text: "Неверно" };
 }
 
-function Intro({ quiz, attempts, progress, onStart, onReview }) {
+function Intro({ quiz, attempts, progress, onStart, onExam, onReview }) {
   const best = attempts.reduce(
     (acc, attempt) => (attempt.total && attempt.score / attempt.total > acc ? attempt.score / attempt.total : acc),
     -1
@@ -130,8 +123,18 @@ function Intro({ quiz, attempts, progress, onStart, onReview }) {
         <Button variant="primary" size="lg" onClick={onStart} kbd="↵">
           Начать
         </Button>
+        <Button variant="secondary" size="lg" onClick={onExam}>
+          Экзамен
+        </Button>
+      </div>
+      <p className="muted small exam-note">
+        Экзамен — {formatQuestions(quiz.questions.length)} за {examDurationSec(quiz.questions.length) / 60} мин, без
+        подсказок до конца, в итоге оценка.
+      </p>
+      <div className="row row-tight intro-extra">
+        <ChallengeButton quiz={quiz} variant="ghost" />
         {quiz.isOwner !== false && (
-          <Button variant="ghost" size="lg" to={`/me/quizzes/${quiz.id}/review`}>
+          <Button variant="ghost" to={`/me/quizzes/${quiz.id}/review`}>
             Ответы
           </Button>
         )}
@@ -177,6 +180,95 @@ function Intro({ quiz, attempts, progress, onStart, onReview }) {
   );
 }
 
+function ExamPlay({ quiz, run, answers, index, setIndex, toggle, onSubmit }) {
+  const { confirm } = useFeedback();
+  const [now, setNow] = useState(Date.now());
+  const question = run.questions[index];
+  const selected = answers[question.id] || [];
+  const left = (run.deadline - now) / 1000;
+  const unanswered = run.questions.filter((q) => !(answers[q.id] || []).length).length;
+  const isLast = index === run.questions.length - 1;
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (left <= 0) onSubmit();
+  }, [left, onSubmit]);
+
+  async function handIn() {
+    if (unanswered) {
+      const ok = await confirm({
+        title: "Сдать работу?",
+        body: `Без ответа ${formatQuestions(unanswered)}. Они будут засчитаны как неверные.`,
+        confirmText: "Сдать",
+      });
+      if (!ok) return;
+    }
+    onSubmit();
+  }
+
+  return (
+    <PageLayout width="narrow" className="play exam">
+      <div className="play-top">
+        <span className="play-counter">
+          {pad2(index + 1)} <span className="muted">/ {pad2(run.questions.length)}</span>
+        </span>
+        <span className={`timer ${left <= 60 ? "is-urgent" : ""}`} aria-label="Осталось времени">
+          {formatClock(left)}
+        </span>
+      </div>
+      <nav className="exam-nav" aria-label="Вопросы">
+        {run.questions.map((q, i) => (
+          <button
+            key={q.id}
+            type="button"
+            className={`exam-cell ${i === index ? "is-current" : ""} ${(answers[q.id] || []).length ? "is-answered" : ""}`}
+            onClick={() => setIndex(i)}
+            aria-label={`Вопрос ${i + 1}${(answers[q.id] || []).length ? ", есть ответ" : ""}`}
+            aria-current={i === index ? "step" : undefined}
+          >
+            {i + 1}
+          </button>
+        ))}
+      </nav>
+
+      <div className="question" key={question.id}>
+        <p className="question-type">{question.type === "multiple" ? "Несколько ответов" : "Один ответ"}</p>
+        <h1 className="question-text">{question.text}</h1>
+        <OptionList options={question.options} type={question.type} selected={selected} onToggle={toggle} />
+        <div className="play-actions">
+          <Button variant="ghost" onClick={() => setIndex(Math.max(0, index - 1))} disabled={index === 0}>
+            Назад
+          </Button>
+          {isLast ? (
+            <Button variant="accent" onClick={handIn}>
+              Сдать работу
+            </Button>
+          ) : (
+            <Button variant="primary" onClick={() => setIndex(index + 1)} kbd="↵">
+              Дальше
+            </Button>
+          )}
+        </div>
+      </div>
+      <p className="muted play-foot">
+        {quiz.title} · отвечено {run.questions.length - unanswered} из {run.questions.length}
+        {!isLast && (
+          <>
+            {" · "}
+            <button type="button" className="link-btn" onClick={handIn}>
+              сдать досрочно
+            </button>
+          </>
+        )}
+      </p>
+    </PageLayout>
+  );
+}
+
 function Summary({ quiz, run, answers, onRestart, onRetryWrong }) {
   const [onlyMistakes, setOnlyMistakes] = useState(false);
   const graded = run.questions.map((question) => ({
@@ -190,8 +282,11 @@ function Summary({ quiz, run, answers, onRestart, onRetryWrong }) {
   const mistakes = graded.filter((item) => !item.grade.isFullyCorrect);
   const shown = onlyMistakes ? mistakes : graded;
 
-  const message =
-    percent === 100 ? "Без единой ошибки." : percent >= 80 ? "Почти идеально." : percent >= 50 ? "Неплохо, есть что подтянуть." : "Стоит пройти ещё раз.";
+  const exam = run.mode === "exam" ? examGrade(score, total) : null;
+  const spent = run.finishedAt && run.startedAt ? formatClock((run.finishedAt - run.startedAt) / 1000) : "";
+  const message = exam
+    ? `Оценка «${exam.label}»${spent ? `, время ${spent}` : ""}.`
+    : percent === 100 ? "Без единой ошибки." : percent >= 80 ? "Почти идеально." : percent >= 50 ? "Неплохо, есть что подтянуть." : "Стоит пройти ещё раз.";
 
   return (
     <PageLayout width="narrow" className="solo-summary">
@@ -201,7 +296,13 @@ function Summary({ quiz, run, answers, onRestart, onRetryWrong }) {
           {score}
           <span className="score-of">/{total}</span>
         </span>
-        <span className="score-percent">{percent}%</span>
+        {exam ? (
+          <span className="score-percent score-grade" title={exam.label}>
+            {exam.grade}
+          </span>
+        ) : (
+          <span className="score-percent">{percent}%</span>
+        )}
       </div>
       <p className="lead">{message}</p>
       <div className="meter" aria-hidden="true">
@@ -225,6 +326,19 @@ function Summary({ quiz, run, answers, onRestart, onRetryWrong }) {
             Вызвать на дуэль
           </Button>
         )}
+      </div>
+      <div className="row row-tight">
+        <ShareResultButton
+          card={{
+            kind: MODE_LABEL[run.mode],
+            title: quiz.title,
+            score,
+            total,
+            stamp: exam ? String(exam.grade) : `${percent}%`,
+            caption: exam ? `${exam.label}${spent ? ` · ${spent}` : ""}` : message,
+          }}
+        />
+        <ChallengeButton quiz={quiz} variant="ghost" />
       </div>
 
       <section className="section">
@@ -305,7 +419,13 @@ export default function SoloQuizPage() {
   );
 
   function begin(questions, mode) {
-    setRun({ questions: prepareQuestionsSet(questions), mode });
+    const startedAt = Date.now();
+    setRun({
+      questions: prepareQuestionsSet(questions),
+      mode,
+      startedAt,
+      deadline: mode === "exam" ? startedAt + examDurationSec(questions.length) * 1000 : null,
+    });
     setIndex(0);
     setAnswers({});
     setChecked({});
@@ -325,10 +445,13 @@ export default function SoloQuizPage() {
   }
 
   async function finish() {
+    if (phase !== "play") return;
     setPhase("done");
+    setRun((prev) => ({ ...prev, finishedAt: Date.now() }));
     const isCorrect = (q) => gradeAnswerDetailed(q, answers[q.id] || []).isFullyCorrect;
     const score = run.questions.filter(isCorrect).length;
-    const practice = run.mode !== "all";
+    // full runs and exams count as attempts; mistakes / weak-spot drills are practice
+    const practice = run.mode !== "all" && run.mode !== "exam";
     if (!practice) {
       const local = {
         id: `local-${Date.now()}`,
@@ -352,6 +475,11 @@ export default function SoloQuizPage() {
       .catch(() => {});
   }
 
+  // the exam timer calls the latest finish(), not the one from when it started
+  const finishRef = useRef(finish);
+  finishRef.current = finish;
+  const submitExam = useCallback(() => finishRef.current(), []);
+
   function primaryAction() {
     if (!question || !selected.length) return;
     if (!isChecked) {
@@ -363,7 +491,14 @@ export default function SoloQuizPage() {
   }
 
   useHotkeys(
-    phase === "play"
+    phase === "play" && run.mode === "exam"
+      ? {
+          digit: toggle,
+          Enter: () => setIndex((value) => Math.min(run.questions.length - 1, value + 1)),
+          ArrowRight: () => setIndex((value) => Math.min(run.questions.length - 1, value + 1)),
+          ArrowLeft: () => setIndex((value) => Math.max(0, value - 1)),
+        }
+      : phase === "play"
       ? {
           digit: toggle,
           Enter: primaryAction,
@@ -408,6 +543,7 @@ export default function SoloQuizPage() {
         attempts={attempts}
         progress={questionProgress}
         onStart={() => begin(quiz.questions, "all")}
+        onExam={() => begin(quiz.questions, "exam")}
         onReview={(questions) => begin(questions, "review")}
       />
     );
@@ -426,6 +562,20 @@ export default function SoloQuizPage() {
             "mistakes"
           )
         }
+      />
+    );
+  }
+
+  if (run.mode === "exam") {
+    return (
+      <ExamPlay
+        quiz={quiz}
+        run={run}
+        answers={answers}
+        index={index}
+        setIndex={setIndex}
+        toggle={toggle}
+        onSubmit={submitExam}
       />
     );
   }

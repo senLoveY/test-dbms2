@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
+import ChallengeButton from "../components/ChallengeButton.jsx";
 import { useFeedback } from "../components/Feedback.jsx";
 import PageLayout from "../components/PageLayout.jsx";
 import { PageSkeleton } from "../components/Skeleton.jsx";
@@ -123,6 +124,7 @@ export default function SharedQuizPage() {
         </Button>
       </div>
       <div className="row row-tight shared-extra">
+        <ChallengeButton quiz={quiz} variant="ghost" />
         {!quiz.isOwner && (
           <Button variant="ghost" onClick={saveCopy} loading={busy === "copy"}>
             Сохранить себе

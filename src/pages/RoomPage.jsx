@@ -7,6 +7,7 @@ import OptionList from "../components/OptionList.jsx";
 import PageLayout from "../components/PageLayout.jsx";
 import RoomSettingsForm, { DEFAULT_ROOM_SETTINGS } from "../components/RoomSettingsForm.jsx";
 import RoomSettingsSummary from "../components/RoomSettingsSummary.jsx";
+import ShareResultButton from "../components/ShareResultButton.jsx";
 import { PageSkeleton } from "../components/Skeleton.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { useAnimatedNumber } from "../hooks/useAnimatedNumber.js";
@@ -510,6 +511,8 @@ function Result({ state, userId, onExit, onRematch }) {
   const draw = !alone && ranked[0].score === ranked[1].score;
   const won = !alone && !draw && ranked[0].user_id === userId;
   const headline = alone ? "Игра завершена" : draw ? "Ничья" : won ? "Победа" : "Поражение";
+  const me = ranked.find((player) => player.user_id === userId);
+  const opponent = ranked.find((player) => player.user_id !== userId);
   const note = alone
     ? "Соперник вышел или игра была остановлена."
     : draw
@@ -579,6 +582,21 @@ function Result({ state, userId, onExit, onRematch }) {
           Мои тесты
         </Button>
       </div>
+      {!alone && (
+        <div className="row row-tight">
+          <ShareResultButton
+            card={{
+              kind: "Дуэль",
+              title: state.quiz.title || "Дуэль",
+              score: me?.score ?? 0,
+              total: opponent?.score ?? 0,
+              separator: " : ",
+              stamp: headline,
+              caption: `против ${opponent?.username || "соперника"}`,
+            }}
+          />
+        </div>
+      )}
     </PageLayout>
   );
 }
