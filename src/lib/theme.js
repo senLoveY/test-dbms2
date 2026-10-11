@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
  * index.html applies the resolved theme before first paint; this module keeps it in sync.
  */
 const STORAGE_KEY = "theme";
-const THEME_COLORS = { light: "#f4f0e6", dark: "#141310" };
+const THEME_COLORS = { light: "#f6f6f3", dark: "#121314" };
 const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
 const listeners = new Set();
 
