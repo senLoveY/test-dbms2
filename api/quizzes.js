@@ -3,7 +3,9 @@ import {
   createQuiz,
   deleteQuiz,
   duplicateQuiz,
+  getProgress,
   getQuiz,
+  getQuizAccess,
   getQuizMeta,
   listAttempts,
   listQuizzes,
@@ -28,6 +30,7 @@ export const config = {
 function mapServiceError(res, error) {
   if (error === "Quiz not found") return notFound(res, error);
   if (error === "Forbidden") return forbidden(res, "Это не ваш тест");
+  if (error === "Not shared") return forbidden(res, "Автор закрыл доступ к этому тесту");
   return sendJson(res, 400, { error });
 }
 
@@ -69,6 +72,21 @@ export default async function handler(req, res) {
       const result = await duplicateQuiz(quizId, user.id);
       if (result.error) return mapServiceError(res, result.error);
       return sendJson(res, 201, result);
+    }
+
+    if (extra === "info") {
+      if (req.method !== "GET") return methodNotAllowed(res);
+      const result = await getQuizAccess(quizId, user.id);
+      if (result.error) return mapServiceError(res, result.error);
+      return sendJson(res, 200, result);
+    }
+
+    if (extra === "progress") {
+      if (req.method !== "GET") return methodNotAllowed(res);
+      const result = await getProgress(quizId, user.id);
+      if (result.error) return mapServiceError(res, result.error);
+      res.setHeader("Cache-Control", "no-store");
+      return sendJson(res, 200, result);
     }
 
     if (extra === "attempt") {

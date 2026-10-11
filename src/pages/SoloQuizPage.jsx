@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
 import OptionList from "../components/OptionList.jsx";
@@ -10,6 +10,51 @@ import { formatDate, formatQuestions, pad2 } from "../lib/format.js";
 import { useQuiz } from "../lib/quizStore.js";
 import { shuffleArray } from "../lib/quiz.js";
 import { gradeAnswerDetailed } from "../../lib/gameLogic.js";
+import { buildAttemptAnswers, pickReviewQuestions, summarizeProgress } from "../../lib/progress.js";
+
+const MODE_LABEL = {
+  all: "Результат",
+  mistakes: "Работа над ошибками",
+  review: "Слабые места",
+};
+
+const PROGRESS_GROUPS = [
+  { key: "learned", label: "Выучено" },
+  { key: "learning", label: "В процессе" },
+  { key: "weak", label: "Слабые" },
+  { key: "new", label: "Новые" },
+];
+
+function ProgressPanel({ summary, reviewCount, onReview }) {
+  const done = summary.learned === summary.total;
+  return (
+    <section className="progress-panel" aria-label="Прогресс по вопросам">
+      <div className="stack-bar" aria-hidden="true">
+        {PROGRESS_GROUPS.map(({ key }) =>
+          summary[key] ? (
+            <span key={key} className={`stack-${key}`} style={{ flexGrow: summary[key] }} />
+          ) : null
+        )}
+      </div>
+      <ul className="stack-legend">
+        {PROGRESS_GROUPS.map(({ key, label }) => (
+          <li key={key} className={`legend-${key}`}>
+            <span className="legend-swatch" aria-hidden="true" />
+            {label}
+            <span className="legend-count">{summary[key]}</span>
+          </li>
+        ))}
+      </ul>
+      {done ? (
+        <p className="progress-done">Все вопросы выучены — три верных ответа подряд на каждый.</p>
+      ) : (
+        <Button variant="accent" onClick={onReview} disabled={!reviewCount}>
+          {summary.weak ? "Повторить слабые места" : "Учить дальше"} ({reviewCount})
+        </Button>
+      )}
+    </section>
+  );
+}
 
 function prepareQuestionsSet(sourceQuestions) {
   return shuffleArray(sourceQuestions).map((question) => {
@@ -44,17 +89,26 @@ function verdict(grade) {
   return { tone: "bad", text: "Неверно" };
 }
 
-function Intro({ quiz, attempts, onStart }) {
+function Intro({ quiz, attempts, progress, onStart, onReview }) {
   const best = attempts.reduce(
     (acc, attempt) => (attempt.total && attempt.score / attempt.total > acc ? attempt.score / attempt.total : acc),
     -1
   );
 
+  const summary = progress ? summarizeProgress(quiz.questions, progress) : null;
+  const reviewQueue = progress ? pickReviewQuestions(quiz.questions, progress) : [];
+
   return (
     <PageLayout width="narrow" className="solo-intro">
-      <Link to="/me/quizzes" className="link-quiet">
-        ← Мои тесты
-      </Link>
+      {quiz.isOwner === false ? (
+        <Link to={`/q/${quiz.id}`} className="link-quiet">
+          ← К тесту
+        </Link>
+      ) : (
+        <Link to="/me/quizzes" className="link-quiet">
+          ← Мои тесты
+        </Link>
+      )}
       <p className="eyebrow">Подготовка</p>
       <h1 className="page-title">{quiz.title}</h1>
       {quiz.description && <p className="lead">{quiz.description}</p>}
@@ -76,14 +130,27 @@ function Intro({ quiz, attempts, onStart }) {
         <Button variant="primary" size="lg" onClick={onStart} kbd="↵">
           Начать
         </Button>
-        <Button variant="ghost" size="lg" to={`/me/quizzes/${quiz.id}/review`}>
-          Ответы
-        </Button>
+        {quiz.isOwner !== false && (
+          <Button variant="ghost" size="lg" to={`/me/quizzes/${quiz.id}/review`}>
+            Ответы
+          </Button>
+        )}
       </div>
       <p className="muted hint-keys">
         Отвечайте с клавиатуры: <kbd>1</kbd>–<kbd>9</kbd> — вариант, <kbd>Enter</kbd> — проверить и
         дальше, <kbd>←</kbd> — назад.
       </p>
+
+      {summary && summary.total > 0 && summary.new < summary.total && (
+        <section className="section">
+          <h2 className="section-title">Прогресс</h2>
+          <ProgressPanel
+            summary={summary}
+            reviewCount={reviewQueue.length}
+            onReview={() => onReview(reviewQueue)}
+          />
+        </section>
+      )}
 
       {attempts.length > 0 && (
         <section className="section">
@@ -128,7 +195,7 @@ function Summary({ quiz, run, answers, onRestart, onRetryWrong }) {
 
   return (
     <PageLayout width="narrow" className="solo-summary">
-      <p className="eyebrow">{run.mode === "mistakes" ? "Работа над ошибками" : "Результат"}</p>
+      <p className="eyebrow">{MODE_LABEL[run.mode]}</p>
       <div className="score-hero">
         <span className="score-big">
           {score}
@@ -151,7 +218,10 @@ function Summary({ quiz, run, answers, onRestart, onRetryWrong }) {
           Пройти заново
         </Button>
         {quiz.status === "published" && (
-          <Button variant="accent" to={`/multi/create?quiz=${quiz.id}`}>
+          <Button
+            variant="accent"
+            to={quiz.isOwner === false ? `/q/${quiz.id}` : `/multi/create?quiz=${quiz.id}`}
+          >
             Вызвать на дуэль
           </Button>
         )}
@@ -199,21 +269,31 @@ export default function SoloQuizPage() {
   const { id } = useParams();
   const { quiz, loading, error } = useQuiz(id);
   const [attempts, setAttempts] = useState([]);
+  const [questionProgress, setQuestionProgress] = useState(null);
   const [phase, setPhase] = useState("intro");
   const [run, setRun] = useState({ questions: [], mode: "all" });
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [checked, setChecked] = useState({});
 
+  const loadProgress = useCallback(
+    () =>
+      apiRequest(`/api/quizzes/${id}/progress`)
+        .then((data) => setQuestionProgress(data.progress || {}))
+        .catch(() => {}),
+    [id]
+  );
+
   useEffect(() => {
     let cancelled = false;
     apiRequest(`/api/quizzes/${id}/attempt`)
       .then((data) => !cancelled && setAttempts(data.attempts || []))
       .catch(() => {});
+    loadProgress();
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, loadProgress]);
 
   const question = run.questions[index];
   const selected = (question && answers[question.id]) || [];
@@ -246,21 +326,30 @@ export default function SoloQuizPage() {
 
   async function finish() {
     setPhase("done");
-    if (run.mode !== "all") return;
-    const score = run.questions.filter(
-      (q) => gradeAnswerDetailed(q, answers[q.id] || []).isFullyCorrect
-    ).length;
-    const local = {
-      id: `local-${Date.now()}`,
-      score,
-      total: run.questions.length,
-      created_at: new Date().toISOString(),
-    };
-    setAttempts((prev) => [local, ...prev]);
+    const isCorrect = (q) => gradeAnswerDetailed(q, answers[q.id] || []).isFullyCorrect;
+    const score = run.questions.filter(isCorrect).length;
+    const practice = run.mode !== "all";
+    if (!practice) {
+      const local = {
+        id: `local-${Date.now()}`,
+        score,
+        total: run.questions.length,
+        created_at: new Date().toISOString(),
+      };
+      setAttempts((prev) => [local, ...prev]);
+    }
+    // Every run feeds per-question progress; only full runs count as attempts.
     apiRequest(`/api/quizzes/${id}/attempt`, {
       method: "POST",
-      body: { score, total: run.questions.length },
-    }).catch(() => {});
+      body: {
+        score,
+        total: run.questions.length,
+        practice,
+        answers: buildAttemptAnswers(run.questions, isCorrect),
+      },
+    })
+      .then(loadProgress)
+      .catch(() => {});
   }
 
   function primaryAction() {
@@ -313,7 +402,15 @@ export default function SoloQuizPage() {
   }
 
   if (phase === "intro") {
-    return <Intro quiz={quiz} attempts={attempts} onStart={() => begin(quiz.questions, "all")} />;
+    return (
+      <Intro
+        quiz={quiz}
+        attempts={attempts}
+        progress={questionProgress}
+        onStart={() => begin(quiz.questions, "all")}
+        onReview={(questions) => begin(questions, "review")}
+      />
+    );
   }
 
   if (phase === "done") {
@@ -383,7 +480,7 @@ export default function SoloQuizPage() {
           </Button>
         </div>
       </div>
-      <p className="muted play-foot">{formatQuestions(run.questions.length)} · {run.mode === "mistakes" ? "только ошибки" : quiz.title}</p>
+      <p className="muted play-foot">{formatQuestions(run.questions.length)} · {run.mode === "mistakes" ? "только ошибки" : run.mode === "review" ? "слабые места" : quiz.title}</p>
     </PageLayout>
   );
 }

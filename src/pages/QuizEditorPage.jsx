@@ -267,6 +267,8 @@ function SaveIndicator({ state, savedAt, error }) {
   );
 }
 
+const NOT_OWNER = "Это чужой тест — сохраните его себе, чтобы редактировать копию.";
+
 export default function QuizEditorPage() {
   const { id } = useParams();
   const [params, setParams] = useSearchParams();
@@ -274,7 +276,7 @@ export default function QuizEditorPage() {
   const cached = getCachedQuiz(id, 15_000);
 
   const [loaded, setLoaded] = useState(Boolean(cached));
-  const [loadError, setLoadError] = useState("");
+  const [loadError, setLoadError] = useState(cached?.isOwner === false ? NOT_OWNER : "");
   const [title, setTitle] = useState(cached?.title ?? "");
   const [description, setDescription] = useState(cached?.description ?? "");
   const [tags, setTags] = useState((cached?.tags || []).join(", "));
@@ -301,6 +303,10 @@ export default function QuizEditorPage() {
     fetchQuiz(id)
       .then((quiz) => {
         if (cancelled) return;
+        if (quiz.isOwner === false) {
+          setLoadError(NOT_OWNER);
+          return;
+        }
         skipNextChangeRef.current = true;
         setTitle(quiz.title);
         setDescription(quiz.description || "");

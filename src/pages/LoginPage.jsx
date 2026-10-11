@@ -1,13 +1,17 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AuthLayout, { Field } from "../components/AuthLayout.jsx";
 import Button from "../components/Button.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { humanizeAuthError } from "../lib/format.js";
+import { safeNextPath } from "../lib/share.js";
 
 export default function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const next = safeNextPath(params.get("next"));
+  const nextQuery = params.get("next") ? `?next=${encodeURIComponent(next)}` : "";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,7 +23,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await signIn(email, password);
-      navigate("/");
+      navigate(next, { replace: true });
     } catch (err) {
       setError(humanizeAuthError(err.message));
       setLoading(false);
@@ -32,7 +36,7 @@ export default function LoginPage() {
       lead="Войдите, чтобы открыть свои тесты и дуэли."
       footer={
         <>
-          Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+          Нет аккаунта? <Link to={`/register${nextQuery}`}>Зарегистрироваться</Link>
         </>
       }
     >
