@@ -1,11 +1,11 @@
 /*
  * Offline support:
- * - hashed build assets and fonts: cache-first (their URLs change on every deploy)
+ * - hashed build assets, fonts included: cache-first (their URLs change on every deploy)
  * - page navigations: network-first, falling back to the cached app shell
  * - GET /api/quizzes/*: network-first, so quizzes opened before can be studied offline
  * Everything else (game actions, rooms, auth) always goes to the network.
  */
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL = `shell-${VERSION}`;
 const ASSETS = `assets-${VERSION}`;
 const API = "api-quizzes";
@@ -43,7 +43,7 @@ async function cacheFirst(request) {
   const cached = await cache.match(request);
   if (cached) return cached;
   const response = await fetch(request);
-  if (response.ok || response.type === "opaque") cache.put(request, response.clone());
+  if (response.ok) cache.put(request, response.clone());
   return response;
 }
 
@@ -57,13 +57,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (url.origin === self.location.origin) {
-    if (url.pathname.startsWith("/assets/")) event.respondWith(cacheFirst(request));
-    else if (url.pathname.startsWith("/api/quizzes")) event.respondWith(networkFirst(request, API));
-    return;
-  }
-
-  if (url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com") {
-    event.respondWith(cacheFirst(request));
-  }
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/assets/")) event.respondWith(cacheFirst(request));
+  else if (url.pathname.startsWith("/api/quizzes")) event.respondWith(networkFirst(request, API));
 });

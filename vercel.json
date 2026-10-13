@@ -32,6 +32,10 @@
       "destination": "/api/challenges?id=:id"
     },
     {
+      "source": "/api/account/:action",
+      "destination": "/api/account?action=:action"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

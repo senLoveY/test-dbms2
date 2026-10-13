@@ -15,9 +15,9 @@ const COLORS = {
   pen: "#d7263d",
 };
 const FONTS = {
-  serif: '"Literata", Georgia, serif',
-  sans: '"Onest", system-ui, sans-serif',
-  mono: '"JetBrains Mono", ui-monospace, monospace',
+  serif: '"Literata Variable", Georgia, serif',
+  sans: '"Onest Variable", system-ui, sans-serif',
+  mono: '"JetBrains Mono Variable", ui-monospace, monospace',
 };
 
 async function loadFonts(sample) {

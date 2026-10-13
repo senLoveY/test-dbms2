@@ -1,5 +1,19 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { clearOfflineQuizzes } from "../lib/pwa.js";
+import { clearQuizCache } from "../lib/quizStore.js";
 import { isSupabaseConfigured, supabase } from "../lib/supabase.js";
+import { CONSENT_VERSION } from "../../lib/privacy.js";
+
+/** Whatever this device kept about the signed-out account. */
+function forgetLocalData() {
+  clearQuizCache();
+  clearOfflineQuizzes();
+  try {
+    sessionStorage.clear();
+  } catch {
+    // storage may be unavailable (private mode); nothing to clear then
+  }
+}
 
 const AuthContext = createContext(null);
 
@@ -19,31 +33,31 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    // also fires when the session expires or is revoked, not only on "Выйти"
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === "SIGNED_OUT") forgetLocalData();
       setSession(nextSession);
     });
 
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    async function loadProfile() {
-      if (!supabase || !session?.user) {
-        setProfile(null);
-        return;
-      }
+  const userId = session?.user?.id;
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, username")
-        .eq("id", session.user.id)
-        .maybeSingle();
-
-      setProfile(data);
+  const loadProfile = useCallback(async () => {
+    if (!supabase || !userId) {
+      setProfile(null);
+      return;
     }
 
+    // "*" so the app keeps working before privacy-migration.sql adds the consent columns
+    const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+    setProfile(data);
+  }, [userId]);
+
+  useEffect(() => {
     loadProfile();
-  }, [session]);
+  }, [loadProfile]);
 
   const value = useMemo(
     () => ({
@@ -52,11 +66,13 @@ export function AuthProvider({ children }) {
       user: session?.user ?? null,
       loading,
       isConfigured: isSupabaseConfigured,
+      refreshProfile: loadProfile,
       async signUp(email, password, username) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { username } },
+          // the consent checkbox is required on the form; the database trigger records it
+          options: { data: { username, consent_version: CONSENT_VERSION } },
         });
         if (error) throw error;
         return data;
@@ -73,8 +89,13 @@ export function AuthProvider({ children }) {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
       },
+      /** After the account is deleted on the server: drop the session on this device only. */
+      async forgetSession() {
+        await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+        forgetLocalData();
+      },
     }),
-    [session, profile, loading]
+    [session, profile, loading, loadProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

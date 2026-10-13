@@ -1,9 +1,9 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext.jsx";
-import { clearOfflineQuizzes } from "../lib/pwa.js";
-import { clearQuizCache } from "../lib/quizStore.js";
 import { useThemePreference } from "../lib/theme.js";
+import { needsConsent } from "../../lib/privacy.js";
+import ConsentGate from "./ConsentGate.jsx";
 import Segmented from "./Segmented.jsx";
 
 const THEME_OPTIONS = [
@@ -85,6 +85,9 @@ function UserMenu({ name, onSignOut }) {
             </p>
             <Segmented options={THEME_OPTIONS} value={theme} onChange={setTheme} size="sm" label="Тема" />
           </div>
+          <Link to="/me/account" role="menuitem" className="menu-item" onClick={() => setOpen(false)}>
+            Аккаунт и данные
+          </Link>
           <button type="button" role="menuitem" className="menu-item" onClick={onSignOut}>
             Выйти из аккаунта
           </button>
@@ -147,7 +150,9 @@ export default function AppShell({ children }) {
   const inGame = location.pathname.startsWith("/room/");
   // a stray tap on a tab mid-run would abandon a timed game, so hide the tabs there
   const inPlay = inGame || /^\/(q\/[^/]+\/study|c\/)/.test(location.pathname);
-  const showTabs = Boolean(user) && !inPlay;
+  // the policy stays readable while the consent screen is up
+  const askConsent = needsConsent(profile) && location.pathname !== "/privacy";
+  const showTabs = Boolean(user) && !inPlay && !askConsent;
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -155,8 +160,6 @@ export default function AppShell({ children }) {
 
   async function handleSignOut() {
     await signOut();
-    clearQuizCache();
-    clearOfflineQuizzes();
     navigate("/");
   }
 
@@ -209,7 +212,7 @@ export default function AppShell({ children }) {
       </header>
 
       <main id="main" className="main" key={location.pathname}>
-        <Suspense fallback={<TopProgress />}>{children}</Suspense>
+        <Suspense fallback={<TopProgress />}>{askConsent ? <ConsentGate /> : children}</Suspense>
       </main>
 
       {showTabs && <TabBar />}
