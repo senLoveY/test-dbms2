@@ -58,6 +58,11 @@ function Landing({ isConfigured }) {
           </li>
         ))}
       </ol>
+
+      <footer className="site-foot">
+        <span>Без рекламы, аналитики и cookie.</span>
+        <Link to="/privacy">Конфиденциальность</Link>
+      </footer>
     </PageLayout>
   );
 }

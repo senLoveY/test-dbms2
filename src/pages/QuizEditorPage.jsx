@@ -108,6 +108,10 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
         Загрузите конспект или методичку (PDF, DOCX, TXT) либо вставьте текст. Модель предложит
         черновик — правильные ответы стоит проверить перед публикацией.
       </p>
+      <p className="notice notice-warn">
+        Текст уходит в модель DeepSeek (Китай) и там не защищён по белорусским правилам. Не загружайте документы с
+        персональными данными — своими или чужими: ФИО, телефоны, списки группы.
+      </p>
       <label className={`link-btn file-btn ${busy || reading ? "is-disabled" : ""}`}>
         {reading ? "Читаем файл…" : fileName ? `Файл: ${fileName} — выбрать другой` : "Выбрать файл"}
         <input

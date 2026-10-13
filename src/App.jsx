@@ -18,6 +18,8 @@ const pages = {
   multiCreate: () => import("./pages/MultiCreatePage.jsx"),
   multiJoin: () => import("./pages/MultiJoinPage.jsx"),
   room: () => import("./pages/RoomPage.jsx"),
+  account: () => import("./pages/AccountPage.jsx"),
+  privacy: () => import("./pages/PrivacyPage.jsx"),
 };
 
 const LoginPage = lazy(pages.login);
@@ -31,6 +33,8 @@ const ChallengePage = lazy(pages.challenge);
 const MultiCreatePage = lazy(pages.multiCreate);
 const MultiJoinPage = lazy(pages.multiJoin);
 const RoomPage = lazy(pages.room);
+const AccountPage = lazy(pages.account);
+const PrivacyPage = lazy(pages.privacy);
 
 /** Fetch the remaining page chunks once the browser is idle, so navigation never waits. */
 function usePreloadPages() {
@@ -62,6 +66,15 @@ export default function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route
+                path="/me/account"
+                element={
+                  <Private message="Войдите, чтобы управлять аккаунтом">
+                    <AccountPage />
+                  </Private>
+                }
+              />
               <Route
                 path="/me/quizzes"
                 element={

@@ -18,7 +18,8 @@
 4. **Обязательно** выполните [`supabase/perf-migration.sql`](supabase/perf-migration.sql) — RPC-функции, на которых работает API (атомарные игровые действия, сохранение теста одной транзакцией), приватные снапшоты вопросов и исправленные RLS-политики для Realtime. Скрипт можно запускать повторно.
 5. **Обязательно** выполните [`supabase/security-migration.sql`](supabase/security-migration.sql) — закрывает прямую запись в таблицы в обход API, прячет ответы соперника в дуэли (в том числе из realtime), ограничивает чтение профилей своим и добавляет лимит генерации (20 в час на пользователя). Скрипт можно запускать повторно.
 6. Для вызовов по ссылке выполните [`supabase/challenges-migration.sql`](supabase/challenges-migration.sql).
-7. Realtime: нижняя часть `schema.sql` **или** Dashboard → **Database → Publications → supabase_realtime** — таблицы `rooms` и `room_players`.
+7. **Обязательно** выполните [`supabase/privacy-migration.sql`](supabase/privacy-migration.sql) — согласие на обработку персональных данных (Закон РБ № 99-З), никнейм больше не берётся из email, индексы для автоочистки старых комнат и журнала генераций. Скрипт можно запускать повторно.
+8. Realtime: нижняя часть `schema.sql` **или** Dashboard → **Database → Publications → supabase_realtime** — таблицы `rooms` и `room_players`.
 8. Скопируйте URL, `anon key` и `service_role key`.
 
 ### 2. Переменные окружения
