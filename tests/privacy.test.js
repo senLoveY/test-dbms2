@@ -1,17 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
-import { CONSENT_VERSION, daysAgo, needsConsent, normalizeUsername } from "../lib/privacy.js";
+import { daysAgo, normalizeUsername } from "../lib/privacy.js";
 
 describe("personal data", () => {
-  it("needsConsent asks only when the consent column exists and is outdated", () => {
-    assert.equal(needsConsent(null), false);
-    assert.equal(needsConsent({ id: "u", username: "a" }), false, "migration not applied yet");
-    assert.equal(needsConsent({ consent_version: null }), true);
-    assert.equal(needsConsent({ consent_version: "2000-01-01" }), true);
-    assert.equal(needsConsent({ consent_version: CONSENT_VERSION }), false);
-  });
-
   it("normalizeUsername trims, limits length and rejects emails", () => {
     assert.deepEqual(normalizeUsername("  Паша   К  "), { username: "Паша К" });
     assert.ok(normalizeUsername("").error);

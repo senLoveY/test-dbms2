@@ -1,5 +1,5 @@
 import { getUserFromRequest } from "../lib/supabaseAdmin.js";
-import { acceptConsent, deleteAccount, exportAccount, updateUsername } from "../lib/accountService.js";
+import { deleteAccount, exportAccount, updateUsername } from "../lib/accountService.js";
 import { getApiParts } from "../lib/apiPath.js";
 import { badRequest, methodNotAllowed, notFound, sendJson, serverError, unauthorized } from "../lib/http.js";
 
@@ -29,11 +29,6 @@ export default async function handler(req, res) {
     if (action === "export") {
       if (req.method !== "GET") return methodNotAllowed(res);
       return send(res, { data: await exportAccount(user) });
-    }
-
-    if (action === "consent") {
-      if (req.method !== "POST") return methodNotAllowed(res);
-      return send(res, await acceptConsent(user.id, body.version));
     }
 
     return notFound(res, "Unknown account action");

@@ -2,8 +2,6 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AuthLayout, { Field } from "../components/AuthLayout.jsx";
 import Button from "../components/Button.jsx";
-import ConsentText from "../components/ConsentText.jsx";
-import Modal from "../components/Modal.jsx";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { humanizeAuthError } from "../lib/format.js";
 import { safeNextPath } from "../lib/share.js";
@@ -20,8 +18,6 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
-  const [consent, setConsent] = useState(false);
-  const [showConsent, setShowConsent] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -96,44 +92,11 @@ export default function RegisterPage() {
             minLength={6}
           />
         </Field>
-        <label className="check-row">
-          <input
-            type="checkbox"
-            className="check"
-            checked={consent}
-            onChange={(e) => setConsent(e.target.checked)}
-            required
-          />
-          <span>
-            Даю{" "}
-            <button type="button" className="link-btn link-inline" onClick={() => setShowConsent(true)}>
-              согласие на обработку персональных данных
-            </button>
-            , включая передачу за границу. Подробнее — в{" "}
-            <Link to="/privacy" target="_blank">
-              политике
-            </Link>
-          </span>
-        </label>
         {error && <p className="notice notice-bad">{error}</p>}
-        <Button variant="primary" type="submit" size="lg" block loading={loading} disabled={!consent}>
+        <Button variant="primary" type="submit" size="lg" block loading={loading}>
           Создать аккаунт
         </Button>
       </form>
-      <Modal open={showConsent} onClose={() => setShowConsent(false)} title="Согласие на обработку данных" wide>
-        <ConsentText />
-        <div className="dialog-actions">
-          <Button
-            variant="primary"
-            onClick={() => {
-              setConsent(true);
-              setShowConsent(false);
-            }}
-          >
-            Даю согласие
-          </Button>
-        </div>
-      </Modal>
     </AuthLayout>
   );
 }

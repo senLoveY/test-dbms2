@@ -1,17 +1,10 @@
--- Personal data (Law of Belarus No. 99-З). Run once in Supabase SQL Editor after
--- security-migration.sql (safe to re-run).
+-- Personal data housekeeping. Run once in Supabase SQL Editor after security-migration.sql
+-- (safe to re-run).
 --
---   1. Consent: when and which version of the consent text the user accepted.
---      Sign-up passes it in user metadata; existing users are asked in the app.
---   2. A nickname is never derived from the email any more.
---   3. Indexes for the retention cleanup the API runs (old duel rooms, generation log).
+--   1. A nickname is never derived from the email any more.
+--   2. Indexes for the retention cleanup the API runs (old duel rooms, generation log).
 
--- ——— 1. Consent ———
-
-alter table public.profiles add column if not exists consent_version text;
-alter table public.profiles add column if not exists consent_at timestamptz;
-
--- ——— 2. New users ———
+-- ——— 1. New users ———
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -22,19 +15,17 @@ as $$
 declare
   base text;
   candidate text;
-  consent text;
 begin
   base := left(coalesce(
     nullif(trim(new.raw_user_meta_data->>'username'), ''),
     'игрок_' || substr(md5(new.id::text), 1, 6)
   ), 32);
   candidate := base;
-  consent := nullif(trim(new.raw_user_meta_data->>'consent_version'), '');
 
   loop
     begin
-      insert into public.profiles (id, username, consent_version, consent_at)
-      values (new.id, candidate, consent, case when consent is not null then now() end)
+      insert into public.profiles (id, username)
+      values (new.id, candidate)
       on conflict (id) do nothing;
       return new;
     exception when unique_violation then
@@ -44,7 +35,7 @@ begin
 end;
 $$;
 
--- ——— 3. Retention ———
+-- ——— 2. Retention ———
 
 create index if not exists rooms_created_idx on public.rooms (created_at);
 create index if not exists generation_log_created_idx on public.generation_log (created_at);
