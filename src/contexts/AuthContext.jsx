@@ -2,7 +2,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { clearOfflineQuizzes } from "../lib/pwa.js";
 import { clearQuizCache } from "../lib/quizStore.js";
 import { isSupabaseConfigured, supabase } from "../lib/supabase.js";
-import { CONSENT_VERSION } from "../../lib/privacy.js";
 
 /** Whatever this device kept about the signed-out account. */
 function forgetLocalData() {
@@ -50,8 +49,7 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    // "*" so the app keeps working before privacy-migration.sql adds the consent columns
-    const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+    const { data } = await supabase.from("profiles").select("id, username").eq("id", userId).maybeSingle();
     setProfile(data);
   }, [userId]);
 
@@ -71,8 +69,7 @@ export function AuthProvider({ children }) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          // the consent checkbox is required on the form; the database trigger records it
-          options: { data: { username, consent_version: CONSENT_VERSION } },
+          options: { data: { username } },
         });
         if (error) throw error;
         return data;

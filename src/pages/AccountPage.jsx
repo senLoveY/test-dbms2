@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { Field } from "../components/AuthLayout.jsx";
 import Button from "../components/Button.jsx";
 import { useFeedback } from "../components/Feedback.jsx";
@@ -10,10 +9,6 @@ import { apiRequest } from "../lib/api.js";
 import { humanizeAuthError } from "../lib/format.js";
 import { supabase } from "../lib/supabase.js";
 import { USERNAME_MAX } from "../../lib/privacy.js";
-
-function formatDate(value) {
-  return new Date(value).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
-}
 
 function UsernameForm() {
   const { profile, refreshProfile } = useAuth();
@@ -147,8 +142,7 @@ export default function AccountPage() {
       <p className="eyebrow">Аккаунт</p>
       <h1 className="page-title">Аккаунт и данные</h1>
       <p className="lead">
-        Что о вас хранится и как этим управлять. Подробности — в{" "}
-        <Link to="/privacy">политике обработки персональных данных</Link>.
+        Что о вас хранится и как этим управлять.
       </p>
 
       <section className="section">
@@ -169,16 +163,6 @@ export default function AccountPage() {
             Скачать мои данные
           </Button>
         </div>
-      </section>
-
-      <section className="section">
-        <h2 className="section-title">Согласие на обработку</h2>
-        <p className="account-text">
-          {/* the date already ends with "г." */}
-          {profile?.consent_at && `Дано ${formatDate(profile.consent_at)} `}
-          Отозвать согласие — значит удалить аккаунт: без него хранить ваши тесты и результаты нельзя.{" "}
-          <Link to="/privacy#consent">Текст согласия</Link>
-        </p>
       </section>
 
       <section className="section danger-zone">

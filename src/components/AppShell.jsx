@@ -2,8 +2,6 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import { useThemePreference } from "../lib/theme.js";
-import { needsConsent } from "../../lib/privacy.js";
-import ConsentGate from "./ConsentGate.jsx";
 import Segmented from "./Segmented.jsx";
 
 const THEME_OPTIONS = [
@@ -150,9 +148,7 @@ export default function AppShell({ children }) {
   const inGame = location.pathname.startsWith("/room/");
   // a stray tap on a tab mid-run would abandon a timed game, so hide the tabs there
   const inPlay = inGame || /^\/(q\/[^/]+\/study|c\/)/.test(location.pathname);
-  // the policy stays readable while the consent screen is up
-  const askConsent = needsConsent(profile) && location.pathname !== "/privacy";
-  const showTabs = Boolean(user) && !inPlay && !askConsent;
+  const showTabs = Boolean(user) && !inPlay;
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -212,7 +208,7 @@ export default function AppShell({ children }) {
       </header>
 
       <main id="main" className="main" key={location.pathname}>
-        <Suspense fallback={<TopProgress />}>{askConsent ? <ConsentGate /> : children}</Suspense>
+        <Suspense fallback={<TopProgress />}>{children}</Suspense>
       </main>
 
       {showTabs && <TabBar />}
