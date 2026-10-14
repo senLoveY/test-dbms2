@@ -452,14 +452,18 @@ export default function QuizEditorPage() {
 
   const removeQuestion = useCallback(
     (key) => {
-      let removed = null;
-      let removedIndex = -1;
+      // Read what's being removed from current state *before* the updater runs —
+      // React doesn't promise the updater executes synchronously, so capturing
+      // these inside it would leave them null/-1 for the undo toast below.
+      const removedIndex = questions.findIndex((question) => question._key === key);
+      if (removedIndex < 0) return;
+      const removed = questions[removedIndex];
+
       setQuestions((prev) => {
-        removedIndex = prev.findIndex((question) => question._key === key);
-        removed = prev[removedIndex];
         const next = prev.filter((question) => question._key !== key);
         return next.length ? next : [withKey(createEmptyQuestion())];
       });
+
       if (removed && !isBlankQuestion(removed)) {
         toast("Вопрос удалён", {
           action: {
@@ -475,7 +479,7 @@ export default function QuizEditorPage() {
         });
       }
     },
-    [toast]
+    [questions, toast]
   );
 
   const duplicateQuestion = useCallback((key) => {
