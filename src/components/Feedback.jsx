@@ -69,6 +69,9 @@ export function FeedbackProvider({ children }) {
 
   const confirm = useCallback((request) => {
     return new Promise((resolve) => {
+      // A confirm opened while another is still pending would otherwise orphan the
+      // first resolver and hang its awaiter — resolve it as "cancelled" first.
+      resolverRef.current?.(false);
       resolverRef.current = resolve;
       setConfirmRequest(request);
     });

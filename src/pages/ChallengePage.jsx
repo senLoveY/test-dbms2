@@ -141,9 +141,15 @@ function Play({ view, onSubmit }) {
   const isLast = index === questions.length - 1;
   const secondsLeft = useCountdown(deadline);
 
+  // One advance per transition; cleared once the index actually changes.
+  const advancingRef = useRef(false);
+  // The question whose deadline already auto-fired, so the timer never fires twice.
+  const timedOutIndexRef = useRef(-1);
+
   const next = useCallback(async () => {
-    if (submitting) return;
+    if (submitting || advancingRef.current) return;
     if (!isLast) {
+      advancingRef.current = true;
       setIndex((value) => value + 1);
       setDeadline(Date.now() + view.secondsPerQuestion * 1000);
       return;
@@ -152,14 +158,22 @@ function Play({ view, onSubmit }) {
     try {
       await onSubmit(answersRef.current);
     } catch {
+      // let the player retry from the button; the timer won't re-fire for this question
       setSubmitting(false);
     }
   }, [isLast, submitting, onSubmit, view.secondsPerQuestion]);
 
-  // Time's up: keep whatever is selected and move on
   useEffect(() => {
-    if (secondsLeft <= 0) next();
-  }, [secondsLeft, next]);
+    advancingRef.current = false;
+  }, [index]);
+
+  // Time's up: keep whatever is selected and move on — exactly once per question,
+  // so a failed final submit can't spin the effect into a retry loop.
+  useEffect(() => {
+    if (secondsLeft > 0 || timedOutIndexRef.current === index) return;
+    timedOutIndexRef.current = index;
+    next();
+  }, [secondsLeft, index, next]);
 
   function toggle(option) {
     if (option >= question.options.length) return;
