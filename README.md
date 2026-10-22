@@ -5,7 +5,7 @@
 ## Стек
 
 - **Frontend:** React + Vite (деплой на Vercel)
-- **API:** 3 Vercel Serverless Functions (`/api/rooms`, `/api/game`, `/api/quizzes`) — старые пути вроде `/api/rooms/create` проксируются rewrite'ами.
+- **API:** 5 Vercel Functions в `dub1` рядом с базой (`/api/quizzes`, `/api/rooms`, `/api/challenges`, `/api/reports`, `/api/account`); пути вроде `/api/rooms/create` проксируются rewrite'ами, а `/api/game/*` обслуживает функция комнат, чтобы вход в комнату прогревал и приём ответов.
 - **БД + Auth + Realtime:** Supabase
 
 ## Быстрый старт
@@ -120,7 +120,8 @@ CI остановится и попросит один раз выполнить
 - `GET /api/quizzes/:id` — тест с вопросами (только автор)
 - `PUT /api/quizzes/:id` — сохранить / опубликовать
 - `DELETE /api/quizzes/:id` — удалить
-- `POST /api/quizzes/:id/generate` — черновик вопросов из текста (DeepSeek). PDF, DOCX и TXT читаются в браузере, на сервер уходит только текст (до 30 000 символов)
+- `POST /api/quizzes/:id/generate` — черновик вопросов (DeepSeek): `{ source }` — текст (PDF, DOCX, PPTX и TXT читаются в браузере, на сервер уходит только текст, до 30 000 символов) или `{ topic }` — по теме без материала
+- `POST /api/quizzes/:id/source` — `{ url }`, текст статьи по ссылке (с защитой от адресов внутренней сети)
 - `POST /api/quizzes/:id/duplicate` — копия
 - `GET|POST /api/quizzes/:id/attempt` — попытки соло
 
@@ -132,13 +133,20 @@ CI остановится и попросит один раз выполнить
 - `POST /api/rooms/join` — `{ code, nickname }`; гость (анонимный вход) может войти только в комнату класса
 - `POST /api/rooms/kick` — `{ roomId, userId }`, убрать участника (ведущий класса)
 - `GET /api/rooms/state?roomId=` или `?code=` — состояние комнаты
+- `GET /api/rooms/warm` — прогрев функции (лобби класса и страница входа в игру)
 - `POST /api/game/start` — старт (только хост)
-- `POST /api/game/answer` — отправить ответ
+- `POST /api/game/answer` — `{ selected, index }`, отправить ответ на вопрос с номером `index`
 - `POST /api/game/timeout` — истечение таймера
 - `POST /api/game/advance` — `{ index }`, следующий вопрос (хост, после reveal)
 - `POST /api/game/end` — досрочно завершить игру (хост); в классе так же закрывается лобби
 - `POST /api/rooms/leave` — выйти из комнаты
 - `POST /api/rooms/settings` — настройки лобби (хост)
+
+### Отчёты уроков
+
+- `GET /api/reports` — список отчётов ведущего
+- `GET /api/reports/:id` — отчёт (по id отчёта или комнаты)
+- `DELETE /api/reports/:id` — удалить отчёт
 
 Все запросы требуют `Authorization: Bearer <supabase_access_token>`.
 

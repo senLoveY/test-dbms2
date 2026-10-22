@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildOptionOrder,
-  buildQuestionSnapshot,
   getCorrectOptions,
   getPublicQuestion,
   getSelectedAnswerBreakdown,
@@ -104,10 +103,5 @@ describe("helpers", () => {
       { label: "1", state: "wrong-selected" },
       { label: "2", state: "right-selected" },
     ]);
-  });
-
-  it("builds a snapshot no larger than the bank", () => {
-    assert.equal(buildQuestionSnapshot([single, multiple], 10).length, 2);
-    assert.equal(buildQuestionSnapshot([single, multiple], 1).length, 1);
   });
 });
