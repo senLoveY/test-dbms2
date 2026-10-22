@@ -1,11 +1,14 @@
 /**
  * Browser errors to Sentry. The SDK loads after the page is up (it isn't needed to render),
- * errors from before that are queued. Off unless VITE_SENTRY_DSN is set at build time.
+ * errors from before that are queued. On in production builds (lib/sentryConfig.js), off in dev.
  *
  * Nothing personal goes out: no user, no IP-based data, no query strings, no form contents.
  */
 
-const DSN = import.meta.env.VITE_SENTRY_DSN;
+import { DEFAULT_SENTRY_DSN } from "../../lib/sentryConfig.js";
+
+// production builds report to the project by default; dev servers only with an explicit DSN
+const DSN = import.meta.env.VITE_SENTRY_DSN || (import.meta.env.PROD ? DEFAULT_SENTRY_DSN : "");
 const MAX_QUEUE = 20;
 
 let sentry = null;
