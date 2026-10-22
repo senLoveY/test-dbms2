@@ -11,7 +11,7 @@ import { PageSkeleton } from "../components/Skeleton.jsx";
 import Switch from "../components/Switch.jsx";
 import { apiRequest } from "../lib/api.js";
 import { SOURCE_FILE_ACCEPT, extractFileText } from "../lib/fileText.js";
-import { formatQuestions, formatTime } from "../lib/format.js";
+import { formatQuestions, formatTime, plural } from "../lib/format.js";
 import { fetchQuiz, getCachedQuiz, upsertQuiz } from "../lib/quizStore.js";
 import { downloadQuizJson } from "../lib/quizTransfer.js";
 import {
@@ -510,7 +510,12 @@ export default function QuizEditorPage() {
     );
     if (data.title && DEFAULT_TITLES.includes(title.trim())) setTitle(data.title);
     if (generated[0]) setFocusKey(generated[0]._key);
-    toast(`Добавлено: ${formatQuestions(generated.length)}. Проверьте ответы.`);
+    const long = data.longCount
+      ? ` ${plural(data.longCount, ["вопрос остался длинным", "вопроса остались длинными", "вопросов остались длинными"])} — их стоит сократить.`
+      : "";
+    toast(`Добавлено: ${formatQuestions(generated.length)}. Проверьте ответы.${long}`, {
+      duration: data.longCount ? 8000 : undefined,
+    });
   }
 
   function handleImport(parsed, mode) {

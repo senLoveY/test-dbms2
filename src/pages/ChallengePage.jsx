@@ -12,6 +12,7 @@ import { apiRequest } from "../lib/api.js";
 import { formatQuestions, pad2 } from "../lib/format.js";
 import { getAnswerStates } from "../lib/quiz.js";
 import { shareLink } from "../lib/share.js";
+import { readingBonusSec } from "../../lib/readingTime.js";
 
 const MAX_COMPARE = 6;
 
@@ -102,7 +103,7 @@ function Intro({ view, onStart, starting }) {
       </p>
       <h1 className="page-title">{view.quizTitle}</h1>
       <p className="lead">
-        {formatQuestions(view.questionCount)}, по {view.secondsPerQuestion} секунд на каждый. Без подсказок — ответы
+        {formatQuestions(view.questionCount)}, по {view.secondsPerQuestion} секунд на каждый, на длинные — больше. Без подсказок — ответы
         и сравнение после финиша. Пройти можно один раз.
       </p>
       <div className="row">
@@ -132,7 +133,8 @@ function Play({ view, onSubmit }) {
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState(() => questions.map(() => []));
   const [submitting, setSubmitting] = useState(false);
-  const [deadline, setDeadline] = useState(() => Date.now() + view.secondsPerQuestion * 1000);
+  const secondsFor = (i) => view.secondsPerQuestion + readingBonusSec(questions[i]);
+  const [deadline, setDeadline] = useState(() => Date.now() + secondsFor(0) * 1000);
   const answersRef = useRef(answers);
   answersRef.current = answers;
 
@@ -151,7 +153,7 @@ function Play({ view, onSubmit }) {
     if (!isLast) {
       advancingRef.current = true;
       setIndex((value) => value + 1);
-      setDeadline(Date.now() + view.secondsPerQuestion * 1000);
+      setDeadline(Date.now() + secondsFor(index + 1) * 1000);
       return;
     }
     setSubmitting(true);
@@ -161,7 +163,8 @@ function Play({ view, onSubmit }) {
       // let the player retry from the button; the timer won't re-fire for this question
       setSubmitting(false);
     }
-  }, [isLast, submitting, onSubmit, view.secondsPerQuestion]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLast, submitting, onSubmit, index]);
 
   useEffect(() => {
     advancingRef.current = false;
@@ -188,7 +191,7 @@ function Play({ view, onSubmit }) {
 
   useHotkeys({ digit: toggle, Enter: next });
 
-  const total = view.secondsPerQuestion * 1000;
+  const total = secondsFor(index) * 1000;
   return (
     <PageLayout width="narrow" className="play">
       <div className="play-top">

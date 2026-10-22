@@ -15,6 +15,7 @@ import { getAnswerStates, shuffleArray } from "../lib/quiz.js";
 import { gradeAnswerDetailed } from "../../lib/gameLogic.js";
 import { buildAttemptAnswers, pickReviewQuestions, summarizeProgress } from "../../lib/progress.js";
 import { examDurationSec, examGrade, formatClock } from "../../lib/exam.js";
+import { totalReadingSec } from "../../lib/readingTime.js";
 
 const MODE_LABEL = {
   all: "Результат",
@@ -128,7 +129,7 @@ function Intro({ quiz, attempts, progress, onStart, onExam, onReview }) {
         </Button>
       </div>
       <p className="muted small exam-note">
-        Экзамен — {formatQuestions(quiz.questions.length)} за {examDurationSec(quiz.questions.length) / 60} мин, без
+        Экзамен — {formatQuestions(quiz.questions.length)} за {examDurationSec(quiz.questions.length, totalReadingSec(quiz.questions)) / 60} мин, без
         подсказок до конца, в итоге оценка.
       </p>
       <div className="row row-tight intro-extra">
@@ -424,7 +425,7 @@ export default function SoloQuizPage() {
       questions: prepareQuestionsSet(questions),
       mode,
       startedAt,
-      deadline: mode === "exam" ? startedAt + examDurationSec(questions.length) * 1000 : null,
+      deadline: mode === "exam" ? startedAt + examDurationSec(questions.length, totalReadingSec(questions)) * 1000 : null,
     });
     setIndex(0);
     setAnswers({});

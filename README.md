@@ -19,9 +19,11 @@
 5. **Обязательно** выполните [`supabase/security-migration.sql`](supabase/security-migration.sql) — закрывает прямую запись в таблицы в обход API, прячет ответы соперника в дуэли (в том числе из realtime), ограничивает чтение профилей своим и добавляет лимит генерации (20 в час на пользователя). Скрипт можно запускать повторно.
 6. Для вызовов по ссылке выполните [`supabase/challenges-migration.sql`](supabase/challenges-migration.sql).
 7. **Обязательно** выполните [`supabase/privacy-migration.sql`](supabase/privacy-migration.sql) — никнейм больше не берётся из email, индексы для автоочистки старых комнат и журнала генераций. Скрипт можно запускать повторно.
-8. Для режима «Класс» выполните [`supabase/classroom-migration.sql`](supabase/classroom-migration.sql) и в Dashboard включите **Authentication → Sign In / Providers → Anonymous sign-ins**. В **Authentication → Rate Limits** поднимите лимит анонимных входов (по умолчанию около 30 в час с одного IP, а в школе все телефоны выходят в интернет через один адрес). Миграцию и деплой кода делайте вместе: в ней меняются аргументы `room_create` и `room_join`.
-9. Realtime: нижняя часть `schema.sql` **или** Dashboard → **Database → Publications → supabase_realtime** — таблицы `rooms` и `room_players`.
-10. Скопируйте URL, `anon key` и `service_role key`.
+8. **Обязательно** выполните [`supabase/rate-limit-migration.sql`](supabase/rate-limit-migration.sql) — лимит генераций (платные вызовы DeepSeek) и дневной лимит вызовов по ссылке проверяются атомарно. Без неё лимит генераций не действует вовсе. Скрипт можно запускать повторно.
+9. Для режима «Класс» выполните [`supabase/classroom-migration.sql`](supabase/classroom-migration.sql) и в Dashboard включите **Authentication → Sign In / Providers → Anonymous sign-ins**. В **Authentication → Rate Limits** поднимите лимит анонимных входов (по умолчанию около 30 в час с одного IP, а в школе все телефоны выходят в интернет через один адрес). Миграцию и деплой кода делайте вместе: в ней меняются аргументы `room_create` и `room_join`.
+10. Выполните [`supabase/reading-time-migration.sql`](supabase/reading-time-migration.sql) — длинным вопросам в дуэли и классе добавляется время на чтение (та же формула, что в `lib/readingTime.js`). Скрипт можно запускать повторно.
+11. Realtime: нижняя часть `schema.sql` **или** Dashboard → **Database → Publications → supabase_realtime** — таблицы `rooms` и `room_players`.
+12. Скопируйте URL, `anon key` и `service_role key`.
 
 ### 2. Переменные окружения
 
