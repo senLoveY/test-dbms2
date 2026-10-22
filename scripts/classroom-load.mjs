@@ -6,7 +6,9 @@
  * listens to realtime the way the app does: the host to rooms + room_players,
  * a phone to rooms only. Everything it creates is deleted at the end.
  *
- *   node scripts/classroom-load.mjs [players=40] [questions=5]
+ *   node scripts/classroom-load.mjs [players=40] [questions=5] [burst]
+ *
+ * "burst": everyone answers at the same instant instead of over 1.5 s (worst case for locks).
  *
  * It measures the database and API logic, not Vercel cold starts.
  */
@@ -15,6 +17,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const PLAYERS = Number(process.argv[2]) || 40;
 const QUESTIONS = Number(process.argv[3]) || 5;
+const BURST = process.argv[4] === "burst";
 
 for (const line of readFileSync(new URL("../.env", import.meta.url), "utf8").split("\n")) {
   const match = line.match(/^([A-Z_]+)=(.*)$/);
@@ -190,9 +193,9 @@ try {
     if (state.room.status !== "playing") throw new Error(`question ${q + 1}: status ${state.room.status}`);
     await Promise.all(
       phones.map(async ({ token }) => {
-        await new Promise((r) => setTimeout(r, Math.random() * 1500));
+        if (!BURST) await new Promise((r) => setTimeout(r, Math.random() * 1500));
         const started = performance.now();
-        const { state: mine } = await game("answer", token, { roomId: room.id, selected: [Math.floor(Math.random() * 4)] });
+        const { state: mine } = await game("answer", token, { roomId: room.id, index: state.room.current_index, selected: [Math.floor(Math.random() * 4)] });
         answerTimings.push(performance.now() - started);
         if (mine.players.length !== 1) throw new Error("a phone received other players");
       })

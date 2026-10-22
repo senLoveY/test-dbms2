@@ -277,14 +277,14 @@ function Game({ state, userId, act, now, onLeave }) {
       if (!choice.length || submitting) return;
       setSubmitting(true);
       try {
-        await act("/api/game/answer", { selected: choice });
+        await act("/api/game/answer", { selected: choice, index: room.current_index });
       } catch (err) {
         toast(err.message, { tone: "bad" });
       } finally {
         setSubmitting(false);
       }
     },
-    [act, submitting, toast]
+    [act, submitting, toast, room.current_index]
   );
 
   // Deadline: auto-submit the pending choice or tell the server time is up
@@ -296,7 +296,7 @@ function Game({ state, userId, act, now, onLeave }) {
     const pending = selectedRef.current;
     const run =
       !answered && pending.length && settings.autoSubmitOnTimeout
-        ? act("/api/game/answer", { selected: pending })
+        ? act("/api/game/answer", { selected: pending, index: room.current_index })
         : act("/api/game/timeout");
     run.catch(() => {
       timeoutHandledRef.current = "";

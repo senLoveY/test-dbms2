@@ -88,14 +88,14 @@ function Question({ state, me, act, now }) {
       if (!choice.length || submitting) return;
       setSubmitting(true);
       try {
-        await act("/api/game/answer", { selected: choice });
+        await act("/api/game/answer", { selected: choice, index: room.current_index });
       } catch (err) {
         toast(err.message, { tone: "bad" });
       } finally {
         setSubmitting(false);
       }
     },
-    [act, submitting, toast]
+    [act, submitting, toast, room.current_index]
   );
 
   // At the deadline send a pending multiple-choice pick; long after it, close the question if the screen didn't
