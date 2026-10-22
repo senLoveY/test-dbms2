@@ -9,6 +9,7 @@ import {
   updateRoomSettings,
 } from "../lib/roomService.js";
 import { getApiParts } from "../lib/apiPath.js";
+import { handleGame, isGameRequest } from "../lib/gameApi.js";
 import {
   badRequest,
   methodNotAllowed,
@@ -27,6 +28,7 @@ export default async function handler(req, res) {
   try {
     const { user, error: authError } = await getUserFromRequest(req);
     if (authError) return unauthorized(res, authError);
+    if (isGameRequest(req)) return handleGame(req, res, user);
 
     const [action] = getApiParts(req, "rooms");
     if (!action) return notFound(res, "Unknown rooms action");

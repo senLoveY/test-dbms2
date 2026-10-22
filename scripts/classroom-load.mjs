@@ -22,7 +22,8 @@ for (const line of readFileSync(new URL("../.env", import.meta.url), "utf8").spl
 }
 
 const { default: roomsHandler } = await import("../api/rooms.js");
-const { default: gameHandler } = await import("../api/game.js");
+// game actions are served by the rooms function (lib/gameApi.js)
+const gameHandler = roomsHandler;
 const { default: reportsHandler } = await import("../api/reports.js");
 
 const url = process.env.SUPABASE_URL.replace(/\/+$/, "");

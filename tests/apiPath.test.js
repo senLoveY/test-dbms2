@@ -23,3 +23,18 @@ describe("getApiParts", () => {
     assert.deepEqual(parts, ["abc", "attempt"]);
   });
 });
+
+describe("game actions in the rooms function", async () => {
+  const { isGameRequest } = await import("../lib/gameApi.js");
+
+  it("recognizes the rewritten and the original path", () => {
+    assert.equal(isGameRequest(req("/api/rooms?group=game&action=answer", {}, { group: "game", action: "answer" })), true);
+    assert.equal(isGameRequest(req("/api/game/answer")), true);
+    assert.equal(isGameRequest(req("/api/rooms", { "x-matched-path": "/api/game/start" })), true);
+  });
+
+  it("leaves room actions alone", () => {
+    assert.equal(isGameRequest(req("/api/rooms/join")), false);
+    assert.equal(isGameRequest(req("/api/rooms?action=state", {}, { action: "state" })), false);
+  });
+});

@@ -17,7 +17,7 @@
     },
     {
       "source": "/api/game/:action",
-      "destination": "/api/game?action=:action"
+      "destination": "/api/rooms?group=game&action=:action"
     },
     {
       "source": "/api/quizzes/:id/:extra",
