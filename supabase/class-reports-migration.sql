@@ -44,6 +44,9 @@ begin
 
   v_entry := jsonb_build_object(
     'index', v_room.current_index,
+    -- with these the report shows options in the order the class saw them (lib/classReport.js)
+    'id', v_question -> 'id',
+    'shuffled', coalesce((v_room.settings ->> 'shuffleOptions')::boolean, true),
     'type', v_question -> 'type',
     'text', v_question -> 'text',
     'options', v_question -> 'options',

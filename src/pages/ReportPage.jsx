@@ -94,12 +94,15 @@ export default function ReportPage() {
     score: player.score,
     correct_count: player.correct,
   }));
-  const others = report.questions.filter((q) => !report.struggles.includes(q));
+  // the report came over JSON: compare by question number, not by object
+  const struggling = new Set(report.struggles.map((q) => q.index));
+  const others = report.questions.filter((q) => !struggling.has(q.index));
+  const when = formatDate(report.createdAt);
 
   return (
     <PageLayout width="wide" className="report">
       <PageHeader
-        eyebrow={`Урок ${formatDate(report.createdAt)}, ${formatTime(report.createdAt)}`}
+        eyebrow={`Урок ${when.includes(":") ? when : `${when}, ${formatTime(report.createdAt)}`}`}
         title={report.quizTitle}
         actions={
           <>

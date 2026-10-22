@@ -219,6 +219,11 @@ try {
   if (report.questionsPlayed !== QUESTIONS || report.playerCount !== phones.length || !answersAdd) {
     throw new Error("lesson report doesn't match the game");
   }
+  // the screen's option order can be rebuilt only if the question id was recorded
+  const { data: raw } = await admin.from("class_reports").select("questions").eq("room_id", room.id).single();
+  if (!raw.questions.every((q) => q.id && typeof q.shuffled === "boolean")) {
+    throw new Error("report entries lack the question id / shuffle flag: rerun class-reports-migration.sql");
+  }
 
   await new Promise((r) => setTimeout(r, 1500));
   console.log(`API calls: ${calls}; answer latency p50 ${percentile(answerTimings, 50).toFixed(0)} ms, p95 ${percentile(answerTimings, 95).toFixed(0)} ms`);

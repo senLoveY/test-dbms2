@@ -67,3 +67,27 @@ describe("lesson report", () => {
     assert.match(sql, /revoke all on public\.class_reports from anon, authenticated/);
   });
 });
+
+describe("lesson report option order", () => {
+  it("shows options in the order the class saw them, with counts and the right answer moved along", async () => {
+    const { getPublicQuestion, getQuestionShuffleKey } = await import("../lib/gameLogic.js");
+    const question = { id: "q-7", type: "single", text: "?", options: ["Термическая", "Пьезо", "Лазерная", "Светодиодная"], correct: [0] };
+    const entry = { index: 2, id: "q-7", shuffled: true, ...question, counts: [5, 0, 3, 1], players: 9, answered: 9, correctCount: 5 };
+    const report = buildClassReport({ id: "r", room_id: "room-9", questions: [entry], players: [] });
+    const shown = getPublicQuestion(question, getQuestionShuffleKey("room-9", 2, "q-7")).options;
+    const view = report.questions[0];
+    assert.deepEqual(view.options.map((o) => o.label), shown);
+    const right = view.options.find((o) => o.correct);
+    assert.deepEqual([right.label, right.count], ["Термическая", 5]);
+    assert.equal(view.trap.label, "Лазерная");
+    assert.equal(view.options[view.trap.index].label, "Лазерная");
+  });
+
+  it("keeps the stored order for entries without an id or when options weren't shuffled", () => {
+    const entry = { index: 0, options: ["А", "Б"], correct: [1], counts: [1, 2], players: 3, correctCount: 2 };
+    for (const extra of [{}, { id: "x", shuffled: false }]) {
+      const view = buildClassReport({ id: "r", room_id: "room", questions: [{ ...entry, ...extra }], players: [] }).questions[0];
+      assert.deepEqual(view.options.map((o) => o.label), ["А", "Б"]);
+    }
+  });
+});
