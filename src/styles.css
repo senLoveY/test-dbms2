@@ -4341,8 +4341,22 @@ a.menu-item {
   padding: 16px var(--gutter) calc(32px + env(safe-area-inset-bottom));
 }
 
-.cls-phone-wait,
+/* the counter stays on top; the verdict sits in the middle of what's left */
 .cls-phone-result,
+.cls-phone-answered {
+  grid-template-rows: auto 1fr;
+  min-height: calc(100dvh - var(--topbar-h) - 32px);
+}
+
+.cls-phone-center {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.cls-phone-wait,
 .cls-phone-final {
   min-height: calc(100dvh - var(--topbar-h) - 32px);
   align-content: center;
@@ -4674,4 +4688,8 @@ a.menu-item {
   font-weight: 600;
   color: var(--ink);
   text-underline-offset: 3px;
+}
+
+.cls-join-page .form {
+  margin-top: 28px;
 }

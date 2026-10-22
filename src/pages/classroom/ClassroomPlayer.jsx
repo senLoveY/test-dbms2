@@ -147,14 +147,16 @@ function Question({ state, me, act, now }) {
     return (
       <div className={`cls-phone cls-phone-result ${me?.last_answer_correct ? "is-good" : "is-bad"}`}>
         {header}
-        <h1 className="cls-phone-big">
-          {me?.last_answer_correct ? "Верно!" : points > 0 ? "Почти" : me?.skipped ? "Без ответа" : "Неверно"}
-        </h1>
-        {points > 0 && <p className="cls-phone-points">+{points}</p>}
-        {state.reveal?.correctOptions?.length > 0 && !me?.last_answer_correct && (
-          <p className="muted">Правильно: {state.reveal.correctOptions.join(", ")}</p>
-        )}
-        <Standing classroom={classroom} me={me} />
+        <div className="cls-phone-center">
+          <h1 className="cls-phone-big">
+            {me?.last_answer_correct ? "Верно!" : points > 0 ? "Почти" : me?.skipped ? "Без ответа" : "Неверно"}
+          </h1>
+          {points > 0 && <p className="cls-phone-points">+{points}</p>}
+          {state.reveal?.correctOptions?.length > 0 && !me?.last_answer_correct && (
+            <p className="muted">Правильно: {state.reveal.correctOptions.join(", ")}</p>
+          )}
+          <Standing classroom={classroom} me={me} />
+        </div>
       </div>
     );
   }
@@ -162,14 +164,16 @@ function Question({ state, me, act, now }) {
   if (answered) {
     const late = Boolean(me?.skipped);
     return (
-      <div className="cls-phone cls-phone-wait">
+      <div className="cls-phone cls-phone-answered">
         {header}
-        <h1 className="cls-phone-big">{late ? "Подключились" : "Ответ принят"}</h1>
-        <p className="waiting">
-          <span className="pulse-dot" aria-hidden="true" />
-          {late ? "Вы зайдёте со следующего вопроса" : "Смотрите на большой экран"}
-        </p>
-        <Standing classroom={classroom} me={me} />
+        <div className="cls-phone-center">
+          <h1 className="cls-phone-big">{late ? "Подключились" : "Ответ принят"}</h1>
+          <p className="waiting">
+            <span className="pulse-dot" aria-hidden="true" />
+            {late ? "Вы зайдёте со следующего вопроса" : "Смотрите на большой экран"}
+          </p>
+          <Standing classroom={classroom} me={me} />
+        </div>
       </div>
     );
   }

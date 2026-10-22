@@ -193,7 +193,7 @@ export default function AppShell({ children }) {
           )}
 
           <div className="topbar-end">
-            {user ? (
+            {location.pathname.startsWith("/play") ? null : user ? (
               <UserMenu name={displayName} onSignOut={handleSignOut} />
             ) : (
               <>
