@@ -46,7 +46,12 @@ function toQuestions(list) {
 
 const COUNT_PRESETS = [5, 10, 20];
 
+const TOPIC_MAX = 300;
+
 function GenerateDialog({ open, onClose, quizId, onGenerated }) {
+  const [mode, setMode] = useState("material");
+  const [topic, setTopic] = useState("");
+  const [link, setLink] = useState("");
   const [source, setSource] = useState("");
   const [preset, setPreset] = useState("5");
   const [customCount, setCustomCount] = useState("15");
@@ -75,6 +80,26 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
     }
   }
 
+  async function loadLink(event) {
+    event?.preventDefault();
+    if (!link.trim() || reading) return;
+    setError("");
+    setReading(true);
+    try {
+      const article = await apiRequest(`/api/quizzes/${quizId}/source`, {
+        method: "POST",
+        body: { url: link.trim() },
+      });
+      setSource(article.text.slice(0, GENERATE_LIMITS.maxSourceChars));
+      setClipped(article.text.length > GENERATE_LIMITS.maxSourceChars);
+      setFileName(article.title || link.trim());
+    } catch (err) {
+      setError(err.message || "Не удалось открыть ссылку");
+    } finally {
+      setReading(false);
+    }
+  }
+
   const isCustom = preset === "custom";
   const count = isCustom ? Number(customCount) : Number(preset);
   const countValid =
@@ -86,10 +111,12 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
     try {
       const data = await apiRequest(`/api/quizzes/${quizId}/generate`, {
         method: "POST",
-        body: { source, count, allowMultiple },
+        body: mode === "topic" ? { topic: topic.trim(), count, allowMultiple } : { source, count, allowMultiple },
       });
       onGenerated(data);
       setSource("");
+      setTopic("");
+      setLink("");
       setFileName("");
       setClipped(false);
       onClose();
@@ -100,38 +127,95 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
     }
   }
 
-  const tooShort = source.trim().length < 40;
+  const tooShort = mode === "topic" ? topic.trim().length < 3 : source.trim().length < 40;
 
   return (
-    <Modal open={open} onClose={busy ? () => {} : onClose} title="Вопросы из материала" wide>
-      <p className="muted">
-        Загрузите конспект или методичку (PDF, DOCX, TXT) либо вставьте текст. Модель предложит
-        черновик — правильные ответы стоит проверить перед публикацией.
-      </p>
-      <p className="notice notice-warn">
-        Текст отправляется в модель DeepSeek (Китай). Не загружайте документы с персональными данными — своими или
-        чужими: ФИО, телефоны, списки группы.
-      </p>
-      <label className={`link-btn file-btn ${busy || reading ? "is-disabled" : ""}`}>
-        {reading ? "Читаем файл…" : fileName ? `Файл: ${fileName} — выбрать другой` : "Выбрать файл"}
-        <input
-          type="file"
-          accept={SOURCE_FILE_ACCEPT}
-          onChange={readFile}
-          disabled={busy || reading}
-          hidden
-        />
-      </label>
-      <AutoTextarea
-        className="input input-capped"
-        minRows={8}
-        value={source}
-        maxLength={GENERATE_LIMITS.maxSourceChars}
-        onChange={(e) => setSource(e.target.value)}
-        placeholder="…или вставьте учебный текст"
+    <Modal open={open} onClose={busy ? () => {} : onClose} title="Сгенерировать вопросы" wide>
+      <Segmented
+        label="Откуда брать вопросы"
+        value={mode}
+        options={[
+          { value: "material", label: "Из материала" },
+          { value: "topic", label: "По теме" },
+        ]}
+        onChange={(value) => {
+          setMode(value);
+          setError("");
+        }}
         disabled={busy || reading}
-        autoFocus
       />
+
+      {mode === "material" ? (
+        <>
+          <p className="muted">
+            Файл (PDF, DOCX, PPTX, TXT), ссылка на статью или вставленный текст. Модель предложит черновик —
+            правильные ответы стоит проверить перед публикацией.
+          </p>
+          <p className="notice notice-warn">
+            Текст отправляется в модель DeepSeek (Китай). Не загружайте документы с персональными данными — своими или
+            чужими: ФИО, телефоны, списки группы.
+          </p>
+          <div className="source-row">
+            <label className={`link-btn file-btn ${busy || reading ? "is-disabled" : ""}`}>
+              {fileName ? "Другой файл" : "Выбрать файл"}
+              <input
+                type="file"
+                accept={SOURCE_FILE_ACCEPT}
+                onChange={readFile}
+                disabled={busy || reading}
+                hidden
+              />
+            </label>
+            <form className="link-form" onSubmit={loadLink}>
+              <input
+                className="input"
+                type="url"
+                inputMode="url"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                placeholder="https://… ссылка на статью"
+                aria-label="Ссылка на статью"
+                disabled={busy || reading}
+              />
+              <Button variant="secondary" type="submit" disabled={!link.trim() || busy} loading={reading && Boolean(link)}>
+                Загрузить
+              </Button>
+            </form>
+          </div>
+          {reading && <p className="muted small">Читаем источник…</p>}
+          {fileName && !reading && <p className="muted small">Источник: {fileName}</p>}
+          <AutoTextarea
+            className="input input-capped"
+            minRows={8}
+            value={source}
+            maxLength={GENERATE_LIMITS.maxSourceChars}
+            onChange={(e) => setSource(e.target.value)}
+            placeholder="…или вставьте учебный текст"
+            disabled={busy || reading}
+            autoFocus
+          />
+        </>
+      ) : (
+        <>
+          <p className="muted">
+            Напишите тему и уровень — модель составит вопросы по учебным фактам без вашего материала.
+          </p>
+          <p className="notice notice-warn">
+            Без источника модель может ошибиться в деталях. Проверьте каждый вопрос и ответ перед публикацией — особенно
+            цифры, даты и имена.
+          </p>
+          <input
+            className="input"
+            value={topic}
+            maxLength={TOPIC_MAX}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="Например: нормальные формы в реляционных БД, 2 курс"
+            aria-label="Тема"
+            disabled={busy}
+            autoFocus
+          />
+        </>
+      )}
       <div className="dialog-grid">
         <div className="field">
           <span className="field-label">Сколько вопросов</span>
@@ -173,10 +257,12 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
           disabled={busy}
         />
       </div>
-      <p className="counter-hint">
-        {source.length.toLocaleString("ru-RU")} / {GENERATE_LIMITS.maxSourceChars.toLocaleString("ru-RU")}
-        {clipped && " — файл длинный, взято начало"}
-      </p>
+      {mode === "material" && (
+        <p className="counter-hint">
+          {source.length.toLocaleString("ru-RU")} / {GENERATE_LIMITS.maxSourceChars.toLocaleString("ru-RU")}
+          {clipped && " — источник длинный, взято начало"}
+        </p>
+      )}
       {busy && (
         <div className="working" role="status">
           <span className="working-bar" />
@@ -196,15 +282,25 @@ function GenerateDialog({ open, onClose, quizId, onGenerated }) {
   );
 }
 
-function ImportDialog({ open, onClose, onImport }) {
+function ImportDialog({ open, onClose, onImport, existingCount }) {
+  const { confirm } = useFeedback();
   const [text, setText] = useState("");
   const [error, setError] = useState("");
 
-  function run(mode) {
+  async function run(mode) {
     setError("");
     try {
       const parsed = parseImportPayload(text);
       if (!parsed.questions.length) throw new Error("В JSON нет вопросов");
+      if (mode === "replace" && existingCount > 0) {
+        const ok = await confirm({
+          title: "Заменить все вопросы?",
+          body: `Сейчас в тесте ${formatQuestions(existingCount)} — они будут удалены, вместо них появятся ${formatQuestions(parsed.questions.length)} из файла.`,
+          confirmText: "Заменить",
+          tone: "danger",
+        });
+        if (!ok) return;
+      }
       onImport(parsed, mode);
       setText("");
       onClose();
@@ -513,8 +609,9 @@ export default function QuizEditorPage() {
     const long = data.longCount
       ? ` ${plural(data.longCount, ["вопрос остался длинным", "вопроса остались длинными", "вопросов остались длинными"])} — их стоит сократить.`
       : "";
-    toast(`Добавлено: ${formatQuestions(generated.length)}. Проверьте ответы.${long}`, {
-      duration: data.longCount ? 8000 : undefined,
+    const check = data.fromTopic ? " Это вопросы без источника — проверьте факты." : " Проверьте ответы.";
+    toast(`Добавлено: ${formatQuestions(generated.length)}.${check}${long}`, {
+      duration: data.longCount || data.fromTopic ? 8000 : undefined,
     });
   }
 
@@ -602,7 +699,7 @@ export default function QuizEditorPage() {
             </h2>
             <div className="row row-tight">
               <Button variant="ghost" size="sm" onClick={() => setDialog("generate")}>
-                Из файла или текста
+                Сгенерировать
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setDialog("import")}>
                 Импорт JSON
@@ -658,14 +755,14 @@ export default function QuizEditorPage() {
             </p>
             {status === "published" ? (
               <>
-                <p className="muted">Тест доступен для дуэлей. Правки сохраняются автоматически.</p>
+                <p className="muted">Тест доступен для дуэлей, игры в классе и вызовов. Правки сохраняются автоматически.</p>
                 <Button variant="secondary" block onClick={() => publish("draft")}>
                   Снять с публикации
                 </Button>
               </>
             ) : (
               <>
-                <p className="muted">Черновик сохраняется сам. Опубликуйте, чтобы играть дуэли.</p>
+                <p className="muted">Черновик сохраняется сам. Опубликуйте, чтобы играть дуэли и в классе.</p>
                 <Button
                   variant="primary"
                   block
@@ -698,16 +795,26 @@ export default function QuizEditorPage() {
           )}
 
           <div className="side-block side-links">
-            <Button variant="secondary" size="sm" to={`/q/${id}/study`} disabled={!canPublish}>
+            <Button
+              variant="secondary"
+              size="sm"
+              to={`/q/${id}/study`}
+              disabled={problems.length === questions.length}
+            >
               Пройти соло
             </Button>
             <Button variant="ghost" size="sm" to={`/me/quizzes/${id}/review`}>
               Ответы
             </Button>
             {status === "published" && (
-              <Button variant="accent" size="sm" to={`/multi/create?quiz=${id}`}>
-                Дуэль
-              </Button>
+              <>
+                <Button variant="accent" size="sm" to={`/multi/create?quiz=${id}`}>
+                  Дуэль
+                </Button>
+                <Button variant="ghost" size="sm" to={`/multi/create?quiz=${id}&mode=classroom`}>
+                  В классе
+                </Button>
+              </>
             )}
           </div>
           <p className="side-kbd">
@@ -727,6 +834,7 @@ export default function QuizEditorPage() {
         open={dialog === "import"}
         onClose={() => setDialog(null)}
         onImport={handleImport}
+        existingCount={questions.filter((question) => !isBlankQuestion(question)).length}
       />
     </PageLayout>
   );

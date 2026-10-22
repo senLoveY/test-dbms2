@@ -23,6 +23,7 @@ for (const line of readFileSync(new URL("../.env", import.meta.url), "utf8").spl
 
 const { default: roomsHandler } = await import("../api/rooms.js");
 const { default: gameHandler } = await import("../api/game.js");
+const { default: reportsHandler } = await import("../api/reports.js");
 
 const url = process.env.SUPABASE_URL.replace(/\/+$/, "");
 const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
@@ -44,7 +45,7 @@ async function call(handler, group, action, token, body) {
     method: body ? "POST" : "GET",
     url: `/api/${group}/${action}`,
     headers: { authorization: `Bearer ${token}` },
-    query: body ? {} : { roomId: action === "state" ? globalThis.roomId : undefined },
+    query: body ? {} : { roomId: action === "state" ? globalThis.roomId : undefined, id: group === "reports" ? action : undefined },
     body,
   };
   let status = 200;
@@ -205,6 +206,19 @@ try {
   if (state.room.status !== "finished") throw new Error(`expected finished, got ${state.room.status}`);
   const phoneView = await rooms("state", phones[0].token);
   console.log(`phone 1 finished at place ${phoneView.classroom.rank}/${phoneView.classroom.playerCount}`);
+
+  // The lesson report was written at each reveal; the host opens it by room id
+  const { report } = await call(reportsHandler, "reports", room.id, hostToken);
+  const answersAdd = report.questions.every(
+    (q) => q.options.reduce((sum, option) => sum + option.count, 0) === phones.length
+  );
+  console.log(
+    `report: ${report.questionsPlayed}/${QUESTIONS} questions, ${report.playerCount} players, ` +
+      `answers add up: ${answersAdd}, average ${report.averagePercent}%, to go over: ${report.struggles.length}`
+  );
+  if (report.questionsPlayed !== QUESTIONS || report.playerCount !== phones.length || !answersAdd) {
+    throw new Error("lesson report doesn't match the game");
+  }
 
   await new Promise((r) => setTimeout(r, 1500));
   console.log(`API calls: ${calls}; answer latency p50 ${percentile(answerTimings, 50).toFixed(0)} ms, p95 ${percentile(answerTimings, 95).toFixed(0)} ms`);

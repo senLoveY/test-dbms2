@@ -13,8 +13,9 @@ import {
   saveAttempt,
   updateQuiz,
 } from "../lib/quizService.js";
-import { checkGenerationSource, generateQuizFromText } from "../lib/quizGenerate.js";
+import { checkGenerationSource, checkGenerationTopic, generateQuizFromText } from "../lib/quizGenerate.js";
 import { getApiParts } from "../lib/apiPath.js";
+import { fetchArticle } from "../lib/articleSource.js";
 import {
   forbidden,
   methodNotAllowed,
@@ -58,15 +59,25 @@ export default async function handler(req, res) {
 
     if (extra === "generate") {
       if (req.method !== "POST") return methodNotAllowed(res);
-      const { source, count, allowMultiple } = req.body || {};
+      const { source, topic, count, allowMultiple } = req.body || {};
       // Check ownership and quota before the paid model call, not alongside it.
       const owned = await getQuizMeta(quizId, user.id);
       if (owned.error) return mapServiceError(res, owned.error);
-      const sourceError = checkGenerationSource(source);
+      const sourceError = topic ? checkGenerationTopic(topic) : checkGenerationSource(source);
       if (sourceError) return sendJson(res, 400, { error: sourceError });
       const quota = await claimGenerationQuota(user.id);
       if (quota.error) return sendJson(res, 429, { error: quota.error });
-      const result = await generateQuizFromText({ source, count, allowMultiple });
+      const result = await generateQuizFromText({ source, topic, count, allowMultiple });
+      if (result.error) return sendJson(res, 400, { error: result.error });
+      return sendJson(res, 200, result);
+    }
+
+    // Article text from a link, shown in the generator before anything is sent to the model
+    if (extra === "source") {
+      if (req.method !== "POST") return methodNotAllowed(res);
+      const owned = await getQuizMeta(quizId, user.id);
+      if (owned.error) return mapServiceError(res, owned.error);
+      const result = await fetchArticle(req.body?.url);
       if (result.error) return sendJson(res, 400, { error: result.error });
       return sendJson(res, 200, result);
     }

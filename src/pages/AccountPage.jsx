@@ -156,7 +156,8 @@ export default function AccountPage() {
       <section className="section">
         <h2 className="section-title">Мои данные</h2>
         <p className="account-text">
-          Один JSON-файл со всем, что хранится: профиль, тесты с вопросами, попытки, результаты вызовов и дуэлей.
+          Один JSON-файл со всем, что хранится: профиль, тесты с вопросами, попытки, результаты вызовов и дуэлей,
+          отчёты уроков.
         </p>
         <div className="row">
           <Button variant="secondary" onClick={exportData} loading={exporting}>
@@ -168,7 +169,7 @@ export default function AccountPage() {
       <section className="section danger-zone">
         <h2 className="section-title">Удаление аккаунта</h2>
         <p className="account-text">
-          Сотрутся аккаунт, все ваши тесты, попытки, вызовы и ваши результаты в чужих вызовах. Это нельзя отменить —
+          Сотрутся аккаунт, все ваши тесты, попытки, вызовы, отчёты уроков и ваши результаты в чужих вызовах. Это нельзя отменить —
           если нужна копия, сначала скачайте данные.
         </p>
         <div className="row">

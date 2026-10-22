@@ -29,7 +29,7 @@ const TABS = [
   },
   {
     to: "/multi/create",
-    label: "Дуэль",
+    label: "Играть",
     icon: (
       <path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M14.5 6.5 18 3h3v3l-3.5 3.5M5 14l4 4M7 17l-3 3M3 19l2 2" />
     ),
@@ -83,6 +83,9 @@ function UserMenu({ name, onSignOut }) {
             </p>
             <Segmented options={THEME_OPTIONS} value={theme} onChange={setTheme} size="sm" label="Тема" />
           </div>
+          <Link to="/me/reports" role="menuitem" className="menu-item" onClick={() => setOpen(false)}>
+            Отчёты уроков
+          </Link>
           <Link to="/me/account" role="menuitem" className="menu-item" onClick={() => setOpen(false)}>
             Аккаунт и данные
           </Link>
@@ -181,7 +184,7 @@ export default function AppShell({ children }) {
                 Мои тесты
               </NavLink>
               <NavLink to="/multi/create" className="nav-link">
-                Дуэль
+                Играть
               </NavLink>
               <NavLink to="/multi/join" className="nav-link">
                 По&nbsp;коду

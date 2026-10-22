@@ -209,7 +209,7 @@ export default function QuizListPage() {
               onClick={() => handleCreate({ fromFile: true })}
               loading={busyId === "generate"}
             >
-              Из файла
+              Сгенерировать
             </Button>
             <Button variant="primary" onClick={() => handleCreate()} loading={busyId === "create"}>
               Новый тест
@@ -248,8 +248,8 @@ export default function QuizListPage() {
         <div className="empty">
           <p className="empty-title">Здесь будут ваши тесты</p>
           <p className="muted">
-            Создайте тест вручную, импортируйте JSON или загрузите конспект — модель соберёт
-            черновик вопросов.
+            Создайте тест вручную, импортируйте JSON или сгенерируйте вопросы из конспекта, статьи
+            или по теме.
           </p>
           <Button variant="primary" onClick={() => handleCreate()} loading={busyId === "create"}>
             Создать первый тест

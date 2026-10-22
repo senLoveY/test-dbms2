@@ -53,7 +53,7 @@ export default function MultiJoinPage() {
       <PageHeader
         eyebrow="Дуэль"
         title="Войти по коду"
-        lead="Шесть символов из лобби соперника. Комната откроется сразу после ввода."
+        lead="Шесть символов из лобби соперника или с экрана в классе. Комната откроется сразу после ввода."
       />
       <form
         className="join-form"

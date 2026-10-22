@@ -13,6 +13,7 @@ import { formatDate, formatQuestions, pad2 } from "../lib/format.js";
 import { useQuiz } from "../lib/quizStore.js";
 import { getAnswerStates, shuffleArray } from "../lib/quiz.js";
 import { gradeAnswerDetailed } from "../../lib/gameLogic.js";
+import { normalizeQuestion, validateQuestion } from "../../lib/quizModel.js";
 import { buildAttemptAnswers, pickReviewQuestions, summarizeProgress } from "../../lib/progress.js";
 import { examDurationSec, examGrade, formatClock } from "../../lib/exam.js";
 import { totalReadingSec } from "../../lib/readingTime.js";
@@ -83,7 +84,12 @@ function verdict(grade) {
   return { tone: "bad", text: "Неверно" };
 }
 
-function Intro({ quiz, attempts, progress, onStart, onExam, onReview }) {
+/** A draft can hold half-written questions; only finished ones can be graded. */
+function isReady(question) {
+  return validateQuestion(normalizeQuestion(question)).length === 0;
+}
+
+function Intro({ quiz, skipped, attempts, progress, onStart, onExam, onReview }) {
   const best = attempts.reduce(
     (acc, attempt) => (attempt.total && attempt.score / attempt.total > acc ? attempt.score / attempt.total : acc),
     -1
@@ -106,6 +112,17 @@ function Intro({ quiz, attempts, progress, onStart, onExam, onReview }) {
       <p className="eyebrow">Подготовка</p>
       <h1 className="page-title">{quiz.title}</h1>
       {quiz.description && <p className="lead">{quiz.description}</p>}
+      {skipped > 0 && (
+        <p className="notice notice-warn">
+          {formatQuestions(skipped)} с ошибками пропущены — например, без отмеченного правильного ответа.
+          {quiz.isOwner !== false && (
+            <>
+              {" "}
+              <Link to={`/me/quizzes/${quiz.id}/edit`}>Исправить в редакторе</Link>
+            </>
+          )}
+        </p>
+      )}
       <dl className="facts">
         <div>
           <dt>Вопросов</dt>
@@ -382,7 +399,13 @@ function Summary({ quiz, run, answers, onRestart, onRetryWrong }) {
 
 export default function SoloQuizPage() {
   const { id } = useParams();
-  const { quiz, loading, error } = useQuiz(id);
+  const { confirm } = useFeedback();
+  const { quiz: loadedQuiz, loading, error } = useQuiz(id);
+  const quiz = useMemo(
+    () => (loadedQuiz ? { ...loadedQuiz, questions: (loadedQuiz.questions || []).filter(isReady) } : loadedQuiz),
+    [loadedQuiz]
+  );
+  const skipped = (loadedQuiz?.questions?.length || 0) - (quiz?.questions?.length || 0);
   const [attempts, setAttempts] = useState([]);
   const [questionProgress, setQuestionProgress] = useState(null);
   const [phase, setPhase] = useState("intro");
@@ -529,7 +552,9 @@ export default function SoloQuizPage() {
       <PageLayout width="narrow">
         <p className="eyebrow">Подготовка</p>
         <h1 className="page-title">{quiz.title}</h1>
-        <p className="lead">В тесте пока нет вопросов.</p>
+        <p className="lead">
+          {skipped ? "Вопросы ещё не готовы: у каждого должен быть текст, варианты и отмеченный правильный ответ." : "В тесте пока нет вопросов."}
+        </p>
         <Button variant="primary" to={`/me/quizzes/${quiz.id}/edit`}>
           Открыть редактор
         </Button>
@@ -541,6 +566,7 @@ export default function SoloQuizPage() {
     return (
       <Intro
         quiz={quiz}
+        skipped={skipped}
         attempts={attempts}
         progress={questionProgress}
         onStart={() => begin(quiz.questions, "all")}
@@ -581,13 +607,26 @@ export default function SoloQuizPage() {
     );
   }
 
+  async function leaveRun() {
+    const answered = Object.keys(checked).length;
+    if (answered) {
+      const ok = await confirm({
+        title: "Выйти из прохождения?",
+        body: `Отвечено ${answered} из ${run.questions.length}. Эти ответы не сохранятся в прогрессе.`,
+        confirmText: "Выйти",
+      });
+      if (!ok) return;
+    }
+    setPhase("intro");
+  }
+
   const v = grade ? verdict(grade) : null;
   const progress = (index + (isChecked ? 1 : 0)) / run.questions.length;
 
   return (
     <PageLayout width="narrow" className="play">
       <div className="play-top">
-        <button type="button" className="link-quiet" onClick={() => setPhase("intro")}>
+        <button type="button" className="link-quiet" onClick={leaveRun}>
           ← Выйти
         </button>
         <span className="play-counter">

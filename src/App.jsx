@@ -19,6 +19,8 @@ const pages = {
   multiJoin: () => import("./pages/MultiJoinPage.jsx"),
   room: () => import("./pages/RoomPage.jsx"),
   play: () => import("./pages/PlayPage.jsx"),
+  reports: () => import("./pages/ReportsPage.jsx"),
+  report: () => import("./pages/ReportPage.jsx"),
   account: () => import("./pages/AccountPage.jsx"),
 };
 
@@ -34,6 +36,8 @@ const MultiCreatePage = lazy(pages.multiCreate);
 const MultiJoinPage = lazy(pages.multiJoin);
 const RoomPage = lazy(pages.room);
 const PlayPage = lazy(pages.play);
+const ReportsPage = lazy(pages.reports);
+const ReportPage = lazy(pages.report);
 const AccountPage = lazy(pages.account);
 
 /** Fetch the remaining page chunks once the browser is idle, so navigation never waits. */
@@ -71,6 +75,22 @@ export default function App() {
                 element={
                   <Private message="Войдите, чтобы управлять аккаунтом">
                     <AccountPage />
+                  </Private>
+                }
+              />
+              <Route
+                path="/me/reports"
+                element={
+                  <Private message="Войдите, чтобы открыть отчёты уроков">
+                    <ReportsPage />
+                  </Private>
+                }
+              />
+              <Route
+                path="/me/reports/:id"
+                element={
+                  <Private message="Войдите, чтобы открыть отчёт урока">
+                    <ReportPage />
                   </Private>
                 }
               />

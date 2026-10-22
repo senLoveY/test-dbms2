@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
 import PageLayout, { PageHeader } from "../components/PageLayout.jsx";
 import RoomSettingsForm, { DEFAULT_ROOM_SETTINGS } from "../components/RoomSettingsForm.jsx";
@@ -56,7 +56,7 @@ export default function MultiCreatePage() {
   if (quizzesLoading) {
     return (
       <PageLayout>
-        <PageHeader eyebrow="Дуэль" title="Новая комната" />
+        <PageHeader eyebrow={classroom ? "Класс" : "Дуэль"} title="Новая комната" />
         <SkeletonLines rows={3} />
       </PageLayout>
     );
@@ -66,9 +66,9 @@ export default function MultiCreatePage() {
     return (
       <PageLayout width="narrow">
         <PageHeader
-          eyebrow="Дуэль"
+          eyebrow={classroom ? "Класс" : "Дуэль"}
           title="Нужен опубликованный тест"
-          lead="Дуэль играется на вашем тесте. Опубликуйте хотя бы один — и возвращайтесь."
+          lead={`${classroom ? "Игра в классе" : "Дуэль"} идёт по вашему тесту. Опубликуйте хотя бы один — и возвращайтесь.`}
         />
         <div className="row">
           <Button variant="primary" to="/me/quizzes">
@@ -104,6 +104,11 @@ export default function MultiCreatePage() {
           ]}
           onChange={setMode}
         />
+        {classroom && (
+          <Link to="/me/reports" className="link-quiet mode-reports">
+            Отчёты прошлых уроков →
+          </Link>
+        )}
       </div>
 
       <div className="create-grid">

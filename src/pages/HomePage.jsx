@@ -16,8 +16,8 @@ const STEPS = [
     text: "Проверка сразу после ответа, разбор ошибок и повтор только неверных.",
   },
   {
-    title: "Вызовите на дуэль",
-    text: "Комната по коду, общий таймер и очки за скорость. Один тест — два игрока.",
+    title: "Играйте вместе",
+    text: "Дуэль один на один или игра на уроке: вопросы на проекторе, ответы с телефонов, отчёт после урока.",
   },
 ];
 
@@ -31,8 +31,8 @@ function Landing({ isConfigured }) {
           хочется <em>проходить.</em>
         </h1>
         <p className="lead hero-lead">
-          Соберите свои вопросы, готовьтесь к контрольной в своём темпе или позовите друга на
-          дуэль с таймером.
+          Соберите вопросы из конспекта, статьи или по теме, готовьтесь к контрольной в своём темпе,
+          позовите друга на дуэль или проведите игру в классе.
         </p>
         <div className="row">
           <Button variant="primary" size="lg" to="/register">
@@ -42,6 +42,9 @@ function Landing({ isConfigured }) {
             У меня есть аккаунт →
           </Button>
         </div>
+        <p className="muted hero-play">
+          Есть код от учителя? <Link to="/play">Войти в игру без аккаунта →</Link>
+        </p>
         {!isConfigured && (
           <p className="notice notice-bad">
             Supabase не настроен. Добавьте переменные из <code>.env.example</code>.
@@ -78,6 +81,9 @@ function Dashboard({ name }) {
           <Button variant="accent" to="/multi/create">
             Создать дуэль
           </Button>
+          <Button variant="secondary" to="/multi/create?mode=classroom">
+            Играть в классе
+          </Button>
           <Button variant="ghost" to="/multi/join">
             Войти по коду →
           </Button>
@@ -99,7 +105,7 @@ function Dashboard({ name }) {
         {!loading && recent.length === 0 && (
           <div className="empty">
             <p className="empty-title">Пока ни одного теста</p>
-            <p className="muted">Начните с пустого или вставьте конспект — вопросы соберутся сами.</p>
+            <p className="muted">Начните с пустого или загрузите конспект — вопросы соберутся сами.</p>
             <Button variant="primary" to="/me/quizzes?new=1">
               Создать первый тест
             </Button>

@@ -40,7 +40,7 @@ export default function ChallengeButton({ quiz, variant = "secondary", size }) {
       <Modal open={open} onClose={() => setOpen(false)} title="Вызов по ссылке">
         <p className="dialog-text">
           Друзья пройдут те же вопросы, когда им удобно, — по {CHALLENGE_LIMITS.secondsPerQuestion} секунд на
-          вопрос. Потом сравните результаты по каждому вопросу.
+          вопрос, на длинные — больше. Потом сравните результаты по каждому вопросу.
         </p>
         <div className="dialog-grid">
           <span className="field-label">Вопросов</span>

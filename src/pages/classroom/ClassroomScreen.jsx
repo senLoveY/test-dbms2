@@ -331,9 +331,14 @@ function ScreenFinal({ state, onExit }) {
 
       <div className="cls-actions">
         {players.length > 0 && (
-          <Button variant="secondary" onClick={() => downloadResultsCsv(state.quiz.title, players, total)}>
-            Скачать результаты (CSV)
-          </Button>
+          <>
+            <Button variant="accent" to={`/me/reports/${state.room.id}`}>
+              Отчёт по уроку
+            </Button>
+            <Button variant="secondary" onClick={() => downloadResultsCsv(state.quiz.title, players, total)}>
+              Скачать результаты (CSV)
+            </Button>
+          </>
         )}
         <Button variant="primary" onClick={onExit}>
           Готово
