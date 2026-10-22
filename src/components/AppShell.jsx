@@ -153,6 +153,8 @@ export default function AppShell({ children }) {
   // a stray tap on a tab mid-run would abandon a timed game, so hide the tabs there
   const inPlay = inGame || /^\/(q\/[^/]+\/study|c\/)/.test(location.pathname);
   const showTabs = Boolean(user) && !inPlay;
+  // a student's phone in a class game: no links that would take them out of the question
+  const onClassPhone = location.pathname.startsWith("/play");
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -179,7 +181,7 @@ export default function AppShell({ children }) {
             <span className="brand-name">Тесты&nbsp;и&nbsp;состязания</span>
           </Link>
 
-          {user && (
+          {user && !onClassPhone && (
             <nav className="nav" aria-label="Основная навигация">
               <NavLink to="/me/quizzes" className="nav-link">
                 Мои тесты
@@ -194,7 +196,7 @@ export default function AppShell({ children }) {
           )}
 
           <div className="topbar-end">
-            {location.pathname.startsWith("/play") ? null : user ? (
+            {onClassPhone ? null : user ? (
               <UserMenu name={displayName} onSignOut={handleSignOut} />
             ) : (
               <>
