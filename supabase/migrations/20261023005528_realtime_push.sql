@@ -2,8 +2,8 @@
 -- to show (the open question without its answers; after the reveal the right options
 -- and the scores), and Realtime already delivers the row, so phones stop calling the
 -- API on every question change.
--- Run once in Supabase SQL Editor after class-reports-migration.sql and
--- answer-lock-migration.sql (safe to re-run).
+-- Run once in Supabase SQL Editor after 20261022234329_class_reports.sql and
+-- 20261023004742_answer_lock.sql (safe to re-run).
 
 alter table public.rooms
   add column if not exists public_question jsonb,

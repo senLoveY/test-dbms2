@@ -61,7 +61,7 @@ describe("lesson report", () => {
   });
 
   it("is recorded in the same transaction as the reveal", () => {
-    const sql = readFileSync(new URL("../supabase/class-reports-migration.sql", import.meta.url), "utf8");
+    const sql = readFileSync(new URL("../supabase/migrations/20261022234329_class_reports.sql", import.meta.url), "utf8");
     const reveal = sql.slice(sql.indexOf("function public.room_try_reveal_locked"));
     assert.match(reveal, /perform public\.class_report_record\(v_room\.id\)/);
     assert.match(sql, /revoke all on public\.class_reports from anon, authenticated/);

@@ -1,6 +1,6 @@
 -- Lesson reports for classroom mode: per-question answer counts and final standings,
 -- kept for the host after the room itself is purged (a day later).
--- Run once in Supabase SQL Editor after classroom-migration.sql (safe to re-run).
+-- Run once in Supabase SQL Editor after 20261022201004_classroom.sql (safe to re-run).
 
 create table if not exists public.class_reports (
   id uuid primary key default gen_random_uuid(),

@@ -28,7 +28,7 @@ describe("reading time", () => {
   });
 
   it("matches the SQL that sets room deadlines", () => {
-    const sql = readFileSync(new URL("../supabase/reading-time-migration.sql", import.meta.url), "utf8");
+    const sql = readFileSync(new URL("../supabase/migrations/20261022211134_reading_time.sql", import.meta.url), "utf8");
     const fn = sql.slice(sql.indexOf("question_reading_bonus"), sql.indexOf("$$;"));
     assert.match(fn, new RegExp(`least\\(${READING_TIME.maxBonusSec},`));
     assert.match(fn, new RegExp(`- ${READING_TIME.freeChars}\\b`));

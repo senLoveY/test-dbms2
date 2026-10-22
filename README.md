@@ -12,20 +12,24 @@
 
 ### 1. Supabase
 
-1. Создайте проект на [supabase.com](https://supabase.com).
-2. В **SQL Editor** выполните скрипт [`supabase/schema.sql`](supabase/schema.sql).
-3. Для уже существующей БД выполните [`supabase/quizzes-migration.sql`](supabase/quizzes-migration.sql) (и при необходимости `room-settings-migration.sql`).
-4. **Обязательно** выполните [`supabase/perf-migration.sql`](supabase/perf-migration.sql) — RPC-функции, на которых работает API (атомарные игровые действия, сохранение теста одной транзакцией), приватные снапшоты вопросов и исправленные RLS-политики для Realtime. Скрипт можно запускать повторно.
-5. **Обязательно** выполните [`supabase/security-migration.sql`](supabase/security-migration.sql) — закрывает прямую запись в таблицы в обход API, прячет ответы соперника в дуэли (в том числе из realtime), ограничивает чтение профилей своим и добавляет лимит генерации (20 в час на пользователя). Скрипт можно запускать повторно.
-6. Для вызовов по ссылке выполните [`supabase/challenges-migration.sql`](supabase/challenges-migration.sql).
-7. **Обязательно** выполните [`supabase/privacy-migration.sql`](supabase/privacy-migration.sql) — никнейм больше не берётся из email, индексы для автоочистки старых комнат и журнала генераций. Скрипт можно запускать повторно.
-8. **Обязательно** выполните [`supabase/rate-limit-migration.sql`](supabase/rate-limit-migration.sql) — лимит генераций (платные вызовы DeepSeek) и дневной лимит вызовов по ссылке проверяются атомарно. Без неё лимит генераций не действует вовсе. Скрипт можно запускать повторно.
-9. Для режима «Класс» выполните [`supabase/classroom-migration.sql`](supabase/classroom-migration.sql) и в Dashboard включите **Authentication → Sign In / Providers → Anonymous sign-ins**. В **Authentication → Rate Limits** поднимите лимит анонимных входов (по умолчанию около 30 в час с одного IP, а в школе все телефоны выходят в интернет через один адрес). Миграцию и деплой кода делайте вместе: в ней меняются аргументы `room_create` и `room_join`.
-10. Выполните [`supabase/reading-time-migration.sql`](supabase/reading-time-migration.sql) — длинным вопросам в дуэли и классе добавляется время на чтение (та же формула, что в `lib/readingTime.js`). Скрипт можно запускать повторно.
-11. Для отчётов уроков выполните [`supabase/class-reports-migration.sql`](supabase/class-reports-migration.sql) — статистика по каждому вопросу записывается при показе ответа. Скрипт можно запускать повторно.
-12. Выполните [`supabase/answer-lock-migration.sql`](supabase/answer-lock-migration.sql) (ответы класса не ждут друг друга) и [`supabase/realtime-push-migration.sql`](supabase/realtime-push-migration.sql) (телефоны получают вопрос и итоги раунда прямо из Realtime, без запроса к API). Скрипты можно запускать повторно.
-13. Realtime: нижняя часть `schema.sql` **или** Dashboard → **Database → Publications → supabase_realtime** — таблицы `rooms` и `room_players`.
-14. Скопируйте URL, `anon key` и `service_role key`.
+1. Создайте проект на [supabase.com](https://supabase.com) и скопируйте URL, `anon key` и `service_role key`.
+2. Схема базы — это миграции в [`supabase/migrations/`](supabase/migrations), они применяются по порядку имён:
+
+   ```bash
+   npx supabase login        # один раз, откроет браузер
+   npm run db:link           # привязать проект; спросит пароль базы (Settings → Database)
+   npm run db:push           # применить все миграции, которых в базе ещё нет
+   npm run db:status         # какие миграции применены
+   ```
+
+   Новая миграция: `npm run db:new имя` создаст файл в `supabase/migrations/` — пишите SQL туда,
+   а не в SQL Editor. После пуша в `main` CI применит её сам (см. «Деплой»).
+3. Если база уже была настроена вручную через SQL Editor (как рабочая), один раз выполните
+   `npm run db:baseline` — он отмечает все существующие миграции применёнными, ничего не выполняя.
+   Без этого `db:push` попытается накатить их заново.
+4. В Dashboard включите **Authentication → Sign In / Providers → Anonymous sign-ins** (вход учеников в режиме «Класс»)
+   и в **Authentication → Rate Limits** поднимите лимит анонимных входов: по умолчанию около 30 в час с одного IP,
+   а в школе все телефоны выходят в интернет через один адрес.
 
 ### 2. Переменные окружения
 
@@ -65,6 +69,14 @@ CI (`.github/workflows/ci.yml`) на каждый push в `main` и в pull requ
 1. Импортируйте репозиторий в [vercel.com](https://vercel.com).
 2. Добавьте env-переменные из `.env.example` в **Project Settings → Environment Variables**.
 3. Deploy.
+
+Миграции базы применяет GitHub Actions (`.github/workflows/ci.yml`): после успешных тестов на пуше в `main`
+выполняется `supabase db push`. Для этого в **GitHub → Settings → Secrets and variables → Actions** нужны
+секреты `SUPABASE_ACCESS_TOKEN` ([токен аккаунта](https://supabase.com/dashboard/account/tokens)) и
+`SUPABASE_DB_PASSWORD` (пароль базы). Без них шаг пропускается. Если в базе ещё нет истории миграций,
+CI остановится и попросит один раз выполнить `npm run db:baseline`, а не станет накатывать всё заново.
+Миграция и код деплоятся почти одновременно, поэтому изменения схемы делайте совместимыми с текущим кодом
+(добавить колонку или функцию — да, переименовать или удалить используемое — отдельным шагом позже).
 
 ## Как пользоваться
 

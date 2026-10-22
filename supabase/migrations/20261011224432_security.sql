@@ -1,4 +1,4 @@
--- Security hardening. Run once in Supabase SQL Editor after perf-migration.sql (safe to re-run).
+-- Security hardening. Run once in Supabase SQL Editor after 20261008215348_perf.sql (safe to re-run).
 --
 -- The browser talks to the database directly only to read its own profile and to receive
 -- realtime events; every write goes through the API, which uses service_role and bypasses RLS.

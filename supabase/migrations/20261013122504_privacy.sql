@@ -1,4 +1,4 @@
--- Personal data housekeeping. Run once in Supabase SQL Editor after security-migration.sql
+-- Personal data housekeeping. Run once in Supabase SQL Editor after 20261011224432_security.sql
 -- (safe to re-run).
 --
 --   1. A nickname is never derived from the email any more.

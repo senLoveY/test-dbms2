@@ -1,6 +1,6 @@
 -- Classroom mode: the host shows questions on a big screen and does not play,
 -- participants answer from their phones, guests sign in anonymously.
--- Run once in Supabase SQL Editor after perf-migration.sql (safe to re-run).
+-- Run once in Supabase SQL Editor after 20261008215348_perf.sql (safe to re-run).
 
 -- ——— 1. Columns ———
 

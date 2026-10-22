@@ -2,7 +2,7 @@
  * Classroom load test: one host and N guest phones play a short quiz.
  *
  * Runs the real API handlers in-process against the Supabase project from .env
- * (needs classroom-migration.sql applied and anonymous sign-ins enabled), and
+ * (needs 20261022201004_classroom.sql applied and anonymous sign-ins enabled), and
  * listens to realtime the way the app does: the host to rooms + room_players,
  * a phone to rooms only. Everything it creates is deleted at the end.
  *
@@ -237,13 +237,13 @@ try {
   // the screen's option order can be rebuilt only if the question id was recorded
   const { data: raw } = await admin.from("class_reports").select("questions").eq("room_id", room.id).single();
   if (!raw.questions.every((q) => q.id && typeof q.shuffled === "boolean")) {
-    throw new Error("report entries lack the question id / shuffle flag: rerun class-reports-migration.sql");
+    throw new Error("report entries lack the question id / shuffle flag: rerun 20261022234329_class_reports.sql");
   }
 
   await new Promise((r) => setTimeout(r, 1500));
   console.log(`API calls: ${calls}; answer latency p50 ${percentile(answerTimings, 50).toFixed(0)} ms, p95 ${percentile(answerTimings, 95).toFixed(0)} ms`);
   console.log(`realtime events: host ${events.host}, one phone ${events.phone} (phones should see only question changes)`);
-  // what a phone needs arrives with the row (realtime-push-migration.sql), and never the answers
+  // what a phone needs arrives with the row (20261023005528_realtime_push.sql), and never the answers
   const questionRows = pushed.filter((row) => row.status === "playing" && row.public_question);
   const revealRows = pushed.filter((row) => row.status === "revealing" && row.public_reveal?.standings?.length);
   const leaked = pushed.some((row) => row.public_question?.question && "correct" in row.public_question.question);

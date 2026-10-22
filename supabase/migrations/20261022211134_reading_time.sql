@@ -1,5 +1,5 @@
 -- Reading time: a long question (text + options) gets extra seconds on its timer.
--- Run once in Supabase SQL Editor after classroom-migration.sql (safe to re-run).
+-- Run once in Supabase SQL Editor after 20261022201004_classroom.sql (safe to re-run).
 -- The formula mirrors lib/readingTime.js; tests/readingTime.test.js keeps them in sync.
 
 create or replace function public.question_reading_bonus(p_question jsonb)

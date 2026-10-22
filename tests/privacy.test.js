@@ -25,7 +25,7 @@ describe("personal data", () => {
   });
 
   it("sign-up never derives a public nickname from the email", () => {
-    const sql = readFileSync(new URL("../supabase/privacy-migration.sql", import.meta.url), "utf8");
+    const sql = readFileSync(new URL("../supabase/migrations/20261013122504_privacy.sql", import.meta.url), "utf8");
     assert.doesNotMatch(sql, /split_part\(new\.email/);
   });
 });

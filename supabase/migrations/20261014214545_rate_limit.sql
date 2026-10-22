@@ -1,4 +1,4 @@
--- Atomic rate limits. Run once in Supabase SQL Editor after security-migration.sql
+-- Atomic rate limits. Run once in Supabase SQL Editor after 20261011224432_security.sql
 -- (safe to re-run).
 --
 -- The old check-then-insert in the API (SELECT count … then INSERT) let two
