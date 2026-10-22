@@ -15,12 +15,13 @@
 ![Supabase](https://img.shields.io/badge/Supabase-Postgres%20·%20Auth%20·%20Realtime-3FCF8E?logo=supabase&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Vercel-Functions-000000?logo=vercel&logoColor=white)
 ![Sentry](https://img.shields.io/badge/Sentry-errors-362D59?logo=sentry&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/license-MIT-e4f33a)](LICENSE)
 
 <br>
 
-<img src="docs/screenshots/class-reveal.png" width="860" alt="Экран урока на проекторе: правильный ответ, распределение ответов класса и топ-5">
+<img src="docs/lesson.gif" width="880" alt="Урок в режиме «Класс»: ученики подключаются, отвечают с телефонов, проектор показывает разбор и пьедестал">
 
-<sub>Урок в режиме «Класс»: проектор показывает правильный ответ, сколько человек выбрало каждый вариант, и топ-5.</sub>
+<sub>Урок в режиме «Класс»: ученики заходят по QR-коду, отвечают с телефонов, проектор показывает разбор и итоги.</sub>
 
 </div>
 
@@ -76,19 +77,19 @@
 
 <table>
 <tr>
-<td colspan="2"><img src="docs/screenshots/class-lobby.png" alt="Лобби урока: QR-код, код комнаты и подключившиеся ученики"><br><sub><b>Лобби урока</b> — ученики сканируют QR-код и появляются на экране</sub></td>
+<td colspan="2"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/class-lobby.png"><img src="docs/screenshots/class-lobby.png" alt="Лобби урока: QR-код, код комнаты и подключившиеся ученики"></picture><br><sub><b>Лобби урока</b> — ученики сканируют QR-код и появляются на экране</sub></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/screenshots/phone-question.png" alt="Телефон ученика: вопрос и четыре цветные кнопки"><br><sub><b>Телефон ученика</b> — те же буквы и цвета, что на проекторе</sub></td>
-<td width="50%"><img src="docs/screenshots/phone-result.png" alt="Телефон ученика после ответа: Верно, очки и место"><br><sub><b>После ответа</b> — очки за раунд и место в классе</sub></td>
+<td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/phone-question.png"><img src="docs/screenshots/phone-question.png" alt="Телефон ученика: вопрос и четыре цветные кнопки"></picture><br><sub><b>Телефон ученика</b> — те же буквы и цвета, что на проекторе</sub></td>
+<td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/phone-result.png"><img src="docs/screenshots/phone-result.png" alt="Телефон ученика после ответа: Верно, очки и место"></picture><br><sub><b>После ответа</b> — очки за раунд и место в классе</sub></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/screenshots/report.png" alt="Отчёт урока: трудные вопросы и самая частая ошибка"><br><sub><b>Отчёт урока</b> — какие вопросы разобрать и на какую ловушку попались</sub></td>
-<td width="50%"><img src="docs/screenshots/editor.png" alt="Редактор теста"><br><sub><b>Редактор</b> — генерация, импорт, публикация в один клик</sub></td>
+<td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/report.png"><img src="docs/screenshots/report.png" alt="Отчёт урока: трудные вопросы и самая частая ошибка"></picture><br><sub><b>Отчёт урока</b> — какие вопросы разобрать и на какую ловушку попались</sub></td>
+<td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/editor.png"><img src="docs/screenshots/editor.png" alt="Редактор теста"></picture><br><sub><b>Редактор</b> — генерация, импорт, публикация в один клик</sub></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/screenshots/class-final.png" alt="Итоги урока: пьедестал"><br><sub><b>Итоги</b> — пьедестал и таблица класса</sub></td>
-<td width="50%"><img src="docs/screenshots/landing.png" alt="Главная страница"><br><sub><b>Главная</b> — для гостей с кодом от учителя есть вход без аккаунта</sub></td>
+<td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/class-final.png"><img src="docs/screenshots/class-final.png" alt="Итоги урока: пьедестал"></picture><br><sub><b>Итоги</b> — пьедестал и таблица класса</sub></td>
+<td width="50%"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/landing.png"><img src="docs/screenshots/landing.png" alt="Главная страница"></picture><br><sub><b>Главная</b> — для гостей с кодом от учителя есть вход без аккаунта</sub></td>
 </tr>
 </table>
 
@@ -245,3 +246,7 @@ docs/screenshots/     картинки для README
 - В генерацию уходит только текст материала, файлы читаются в браузере. В окне генерации есть предупреждение не загружать персональные данные.
 - Гостевые аккаунты учеников и комнаты класса удаляются через сутки, отчёты уроков — через полгода.
 - В «Аккаунт и данные» можно выгрузить всё о себе одним JSON-файлом или удалить аккаунт вместе с тестами, попытками и отчётами.
+
+## Лицензия
+
+[MIT](LICENSE) © 2026 Pavel Arsianovich. Код можно свободно использовать, менять и распространять, в том числе в своих проектах, — с сохранением указания автора и текста лицензии.
