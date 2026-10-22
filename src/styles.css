@@ -4693,3 +4693,8 @@ a.menu-item {
 .cls-join-page .form {
   margin-top: 28px;
 }
+
+.cls-phone-final .podium {
+  width: 100%;
+  text-align: left;
+}
