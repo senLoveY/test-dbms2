@@ -19,6 +19,7 @@
     "@fontsource-variable/literata": "^5.3.0",
     "@fontsource-variable/onest": "^5.3.1",
     "@mozilla/readability": "^0.6.0",
+    "@sentry/browser": "^11.8.0",
     "@supabase/supabase-js": "^2.49.1",
     "jszip": "^3.10.2",
     "linkedom": "^0.18.14",

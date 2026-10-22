@@ -70,6 +70,12 @@ CI (`.github/workflows/ci.yml`) на каждый push в `main` и в pull requ
 2. Добавьте env-переменные из `.env.example` в **Project Settings → Environment Variables**.
 3. Deploy.
 
+Мониторинг ошибок: создайте проект в [Sentry](https://sentry.io) (тип «React», бесплатного плана хватает) и
+добавьте его DSN в Vercel как `VITE_SENTRY_DSN` и `SENTRY_DSN` (одно и то же значение), затем передеплойте —
+браузерный DSN подставляется при сборке. В Sentry уходят только ошибки: ошибки и падения страниц в браузере
+(SDK грузится после отрисовки) и ответы 500 из API. Без email и id пользователя, без тела запроса и без
+параметров адреса (коды комнат и т. п. вырезаются). Без DSN ничего не отправляется, а код Sentry не попадает в сборку.
+
 Миграции базы применяет GitHub Actions (`.github/workflows/ci.yml`): после успешных тестов на пуше в `main`
 выполняется `supabase db push`. Для этого в **GitHub → Settings → Secrets and variables → Actions** нужны
 секреты `SUPABASE_ACCESS_TOKEN` ([токен аккаунта](https://supabase.com/dashboard/account/tokens)) и

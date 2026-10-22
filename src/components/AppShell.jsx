@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext.jsx";
+import ErrorBoundary from "./ErrorBoundary.jsx";
 import { useThemePreference } from "../lib/theme.js";
 import Segmented from "./Segmented.jsx";
 
@@ -211,7 +212,9 @@ export default function AppShell({ children }) {
       </header>
 
       <main id="main" className="main" key={location.pathname}>
-        <Suspense fallback={<TopProgress />}>{children}</Suspense>
+        <ErrorBoundary resetKey={location.pathname}>
+          <Suspense fallback={<TopProgress />}>{children}</Suspense>
+        </ErrorBoundary>
       </main>
 
       {showTabs && <TabBar />}

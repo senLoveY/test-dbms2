@@ -3,6 +3,10 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    // ties browser error reports to the deployed commit
+    __RELEASE__: JSON.stringify(process.env.VERCEL_GIT_COMMIT_SHA || "dev"),
+  },
   build: {
     rollupOptions: {
       output: {
