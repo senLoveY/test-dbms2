@@ -381,6 +381,8 @@ export default function QuizEditorPage() {
   const [description, setDescription] = useState(cached?.description ?? "");
   const [tags, setTags] = useState((cached?.tags || []).join(", "));
   const [status, setStatus] = useState(cached?.status ?? "draft");
+  // sent with every save: without it the API reads the whole quiz back first to fill it in
+  const visibilityRef = useRef(cached?.visibility ?? "private");
   const [questions, setQuestions] = useState(() => toQuestions(cached?.questions));
   const [focusKey, setFocusKey] = useState(null);
   const [dialog, setDialog] = useState(() => (params.get("generate") ? "generate" : null));
@@ -412,6 +414,7 @@ export default function QuizEditorPage() {
         setDescription(quiz.description || "");
         setTags((quiz.tags || []).join(", "));
         setStatus(quiz.status);
+        visibilityRef.current = quiz.visibility ?? "private";
         setQuestions(toQuestions(quiz.questions));
         setLoaded(true);
       })
@@ -467,12 +470,14 @@ export default function QuizEditorPage() {
             description: data.description,
             tags: data.tags,
             status: targetStatus,
+            visibility: visibilityRef.current,
             questions: data.questions,
           },
         });
         savedVersionRef.current = Math.max(savedVersionRef.current, version);
         upsertQuiz(quiz, { withQuestions: true });
         setStatus(quiz.status);
+        visibilityRef.current = quiz.visibility ?? visibilityRef.current;
         setSavedAt(Date.now());
         setSaveError("");
         setSaveState(versionRef.current === version ? "saved" : "dirty");

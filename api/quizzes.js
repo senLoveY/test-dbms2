@@ -15,7 +15,6 @@ import {
 } from "../lib/quizService.js";
 import { checkGenerationSource, checkGenerationTopic, generateQuizFromText } from "../lib/quizGenerate.js";
 import { getApiParts } from "../lib/apiPath.js";
-import { fetchArticle } from "../lib/articleSource.js";
 import {
   forbidden,
   methodNotAllowed,
@@ -77,6 +76,8 @@ export default async function handler(req, res) {
       if (req.method !== "POST") return methodNotAllowed(res);
       const owned = await getQuizMeta(quizId, user.id);
       if (owned.error) return mapServiceError(res, owned.error);
+      // linkedom + readability are heavy; keep them out of every other request's cold start
+      const { fetchArticle } = await import("../lib/articleSource.js");
       const result = await fetchArticle(req.body?.url);
       if (result.error) return sendJson(res, 400, { error: result.error });
       return sendJson(res, 200, result);
