@@ -4,6 +4,7 @@
   "regions": [
     "dub1"
   ],
+  "fluid": true,
   "functions": {
     "api/quizzes.js": {
       "maxDuration": 60
