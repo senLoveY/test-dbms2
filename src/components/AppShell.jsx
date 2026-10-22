@@ -145,7 +145,7 @@ export default function AppShell({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const displayName = profile?.username || user?.email?.split("@")[0];
-  const inGame = location.pathname.startsWith("/room/");
+  const inGame = /^\/(room|play)\//.test(location.pathname);
   // a stray tap on a tab mid-run would abandon a timed game, so hide the tabs there
   const inPlay = inGame || /^\/(q\/[^/]+\/study|c\/)/.test(location.pathname);
   const showTabs = Boolean(user) && !inPlay;

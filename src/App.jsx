@@ -18,6 +18,7 @@ const pages = {
   multiCreate: () => import("./pages/MultiCreatePage.jsx"),
   multiJoin: () => import("./pages/MultiJoinPage.jsx"),
   room: () => import("./pages/RoomPage.jsx"),
+  play: () => import("./pages/PlayPage.jsx"),
   account: () => import("./pages/AccountPage.jsx"),
 };
 
@@ -32,6 +33,7 @@ const ChallengePage = lazy(pages.challenge);
 const MultiCreatePage = lazy(pages.multiCreate);
 const MultiJoinPage = lazy(pages.multiJoin);
 const RoomPage = lazy(pages.room);
+const PlayPage = lazy(pages.play);
 const AccountPage = lazy(pages.account);
 
 /** Fetch the remaining page chunks once the browser is idle, so navigation never waits. */
@@ -144,6 +146,9 @@ export default function App() {
                   </Private>
                 }
               />
+              {/* classroom players join without an account */}
+              <Route path="/play" element={<PlayPage />} />
+              <Route path="/play/:code" element={<PlayPage />} />
               <Route path="/multi/lobby/:code" element={<LegacyRoomRedirect />} />
               <Route path="/multi/play/:code" element={<LegacyRoomRedirect />} />
               <Route path="/solo" element={<Navigate to="/me/quizzes" replace />} />

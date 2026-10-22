@@ -39,6 +39,7 @@ export default async function handler(req, res) {
   try {
     const { user, error: authError } = await getUserFromRequest(req);
     if (authError) return unauthorized(res, authError);
+    if (user.isAnonymous) return unauthorized(res, "Нужен аккаунт");
 
     const [quizId, extra] = getApiParts(req, "quizzes");
 

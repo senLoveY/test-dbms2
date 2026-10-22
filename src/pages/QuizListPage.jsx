@@ -318,6 +318,10 @@ export default function QuizListPage() {
                         label: "Закрыть доступ по ссылке",
                         onClick: () => handleUnshare(quiz),
                       },
+                      playable && {
+                        label: "Играть в классе",
+                        onClick: () => navigate(`/multi/create?quiz=${quiz.id}&mode=classroom`),
+                      },
                       { label: "Сделать копию", onClick: () => handleDuplicate(quiz.id) },
                       { label: "Экспорт JSON", onClick: () => handleExport(quiz.id) },
                       { label: "Удалить", tone: "danger", onClick: () => handleDelete(quiz) },

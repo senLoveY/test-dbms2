@@ -41,7 +41,11 @@ export function AuthProvider({ children }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  const userId = session?.user?.id;
+  // a guest (anonymous sign-in to join a class) counts as signed out everywhere else
+  const sessionUser = session?.user ?? null;
+  const guest = sessionUser?.is_anonymous ? sessionUser : null;
+  const user = guest ? null : sessionUser;
+  const userId = user?.id;
 
   const loadProfile = useCallback(async () => {
     if (!supabase || !userId) {
@@ -61,7 +65,8 @@ export function AuthProvider({ children }) {
     () => ({
       session,
       profile,
-      user: session?.user ?? null,
+      user,
+      guest,
       loading,
       isConfigured: isSupabaseConfigured,
       refreshProfile: loadProfile,
@@ -82,6 +87,13 @@ export function AuthProvider({ children }) {
         if (error) throw error;
         return data;
       },
+      /** Joining a class without an account: a throwaway anonymous session. */
+      async signInAsGuest() {
+        if (sessionUser) return sessionUser;
+        const { data, error } = await supabase.auth.signInAnonymously();
+        if (error) throw error;
+        return data.user;
+      },
       async signOut() {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
@@ -92,7 +104,7 @@ export function AuthProvider({ children }) {
         forgetLocalData();
       },
     }),
-    [session, profile, loading, loadProfile]
+    [session, user, guest, sessionUser, profile, loading, loadProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

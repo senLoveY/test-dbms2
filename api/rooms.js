@@ -3,6 +3,7 @@ import {
   createRoom,
   getRoomState,
   joinRoom,
+  kickPlayer,
   leaveRoom,
   requestRematch,
   updateRoomSettings,
@@ -45,18 +46,26 @@ export default async function handler(req, res) {
     const body = req.body || {};
 
     if (action === "create") {
-      return sendState(res, await createRoom(user.id, body.settings, body.quizId));
+      if (user.isAnonymous) return unauthorized(res, "Нужен аккаунт");
+      return sendState(res, await createRoom(user.id, body.settings, body.quizId, body.mode));
     }
 
     if (action === "join") {
       if (!body.code) return badRequest(res, "Введите код комнаты");
-      return sendState(res, await joinRoom(body.code, user.id));
+      return sendState(
+        res,
+        await joinRoom(body.code, user.id, { nickname: body.nickname, guest: user.isAnonymous })
+      );
     }
 
     if (!body.roomId) return badRequest(res, "roomId is required");
 
     if (action === "leave") {
       return sendJson(res, 200, await leaveRoom(body.roomId, user.id));
+    }
+
+    if (action === "kick") {
+      return sendState(res, await kickPlayer(body.roomId, user.id, body.userId));
     }
 
     if (action === "rematch") {

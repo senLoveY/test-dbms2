@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
+import { CountdownBar, useSecondsLeft } from "../components/Countdown.jsx";
 import { useFeedback } from "../components/Feedback.jsx";
 import Menu from "../components/Menu.jsx";
 import OptionList from "../components/OptionList.jsx";
@@ -17,35 +18,11 @@ import { normalizeRoomSettings } from "../../lib/roomSettings.js";
 import { apiRequest, clearRoomSession, saveRoomSession } from "../lib/api.js";
 import { shareLink } from "../lib/share.js";
 import { formatPoints, formatQuestions, pad2 } from "../lib/format.js";
+import ClassroomScreen from "./classroom/ClassroomScreen.jsx";
 
 const SETTINGS_SAVE_DELAY_MS = 450;
 
 /* ——— Shared bits ——— */
-
-function CountdownBar({ startedAt, endsAt, now, tone = "default" }) {
-  const total = Math.max(1, endsAt - startedAt);
-  const elapsed = Math.min(total, Math.max(0, now() - startedAt));
-  return (
-    <div className={`countdown countdown-${tone}`} aria-hidden="true">
-      <span
-        key={`${startedAt}-${endsAt}`}
-        style={{ "--d": `${total}ms`, "--delay": `-${elapsed}ms` }}
-      />
-    </div>
-  );
-}
-
-/** Seconds until the deadline, derived during render so it's never stale after a question change. */
-function useSecondsLeft(deadline, now, active) {
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    if (!active || !deadline) return undefined;
-    const id = setInterval(() => setTick((value) => value + 1), 200);
-    return () => clearInterval(id);
-  }, [deadline, active]);
-  if (!active || !deadline) return 0;
-  return Math.max(0, Math.ceil((deadline - now()) / 1000));
-}
 
 function PlayerScore({ player, isMe, revealing, phase }) {
   const previous = Math.max(0, player.score - (player.roundPoints ?? 0));
@@ -653,6 +630,11 @@ export default function RoomPage() {
         </div>
       </PageLayout>
     );
+  }
+
+  if (state.viewer?.mode === "classroom") {
+    if (!state.viewer.isHost) return <Navigate to={`/play/${code}`} replace />;
+    return <ClassroomScreen state={state} code={code} act={act} now={now} onExit={exit} />;
   }
 
   const status = state.room.status;

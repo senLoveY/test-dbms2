@@ -8,6 +8,23 @@ const POLL_REALTIME_MS = 6000;
 const EVENT_DEBOUNCE_MS = 40;
 
 /**
+ * A class has dozens of phones: each answer must not make every phone refetch.
+ * Phones follow only the room row (question changes, reveal); the host's screen
+ * also follows players, coalesced so a burst of answers is one request.
+ */
+const CLASS_PLAYER_POLL_FALLBACK_MS = 3000;
+const CLASS_HOST_DEBOUNCE_MS = 400;
+
+function subscriptionPlan(state) {
+  if (state?.viewer?.mode !== "classroom") {
+    return { players: true, debounceMs: EVENT_DEBOUNCE_MS, fallbackMs: POLL_FALLBACK_MS };
+  }
+  return state.viewer.isHost
+    ? { players: true, debounceMs: CLASS_HOST_DEBOUNCE_MS, fallbackMs: POLL_FALLBACK_MS }
+    : { players: false, debounceMs: EVENT_DEBOUNCE_MS, fallbackMs: CLASS_PLAYER_POLL_FALLBACK_MS };
+}
+
+/**
  * Live room state by room code.
  * - Realtime events trigger a (debounced, coalesced) refresh.
  * - Game actions return the new state directly, so the UI updates in one round trip.
@@ -90,45 +107,55 @@ export function useRoomState(code) {
     refresh();
   }, [refresh]);
 
+  const plan = subscriptionPlan(state);
+  const watchPlayers = plan.players;
+  const debounceMs = plan.debounceMs;
+
   // Realtime subscription
   useEffect(() => {
     if (!roomId || !supabase) return undefined;
 
     let timer = null;
     const onEvent = () => {
-      clearTimeout(timer);
-      timer = setTimeout(refresh, EVENT_DEBOUNCE_MS);
+      // trailing refresh, but a steady stream of events can't postpone it forever
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        refresh();
+      }, debounceMs);
     };
 
-    const channel = supabase
+    let channel = supabase
       .channel(`room:${roomId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
         onEvent
-      )
-      .on(
+      );
+    if (watchPlayers) {
+      channel = channel.on(
         "postgres_changes",
         { event: "*", schema: "public", table: "room_players", filter: `room_id=eq.${roomId}` },
         onEvent
-      )
-      .subscribe((status) => {
-        setRealtime(status === "SUBSCRIBED");
-        if (status === "SUBSCRIBED") refresh();
-      });
+      );
+    }
+    channel = channel.subscribe((status) => {
+      setRealtime(status === "SUBSCRIBED");
+      if (status === "SUBSCRIBED") refresh();
+    });
 
     return () => {
       clearTimeout(timer);
       setRealtime(false);
       supabase.removeChannel(channel);
     };
-  }, [roomId, refresh]);
+  }, [roomId, refresh, watchPlayers, debounceMs]);
 
   // Polling safety net + refresh when the tab comes back
   useEffect(() => {
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") refresh();
-    }, realtime ? POLL_REALTIME_MS : POLL_FALLBACK_MS);
+    }, realtime ? POLL_REALTIME_MS : plan.fallbackMs);
 
     const onVisible = () => {
       if (document.visibilityState === "visible") refresh();
@@ -141,7 +168,7 @@ export function useRoomState(code) {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", onVisible);
     };
-  }, [realtime, refresh]);
+  }, [realtime, refresh, plan.fallbackMs]);
 
   const now = useCallback(() => Date.now() + clockOffsetRef.current, []);
 

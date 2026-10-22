@@ -19,8 +19,9 @@
 5. **Обязательно** выполните [`supabase/security-migration.sql`](supabase/security-migration.sql) — закрывает прямую запись в таблицы в обход API, прячет ответы соперника в дуэли (в том числе из realtime), ограничивает чтение профилей своим и добавляет лимит генерации (20 в час на пользователя). Скрипт можно запускать повторно.
 6. Для вызовов по ссылке выполните [`supabase/challenges-migration.sql`](supabase/challenges-migration.sql).
 7. **Обязательно** выполните [`supabase/privacy-migration.sql`](supabase/privacy-migration.sql) — никнейм больше не берётся из email, индексы для автоочистки старых комнат и журнала генераций. Скрипт можно запускать повторно.
-8. Realtime: нижняя часть `schema.sql` **или** Dashboard → **Database → Publications → supabase_realtime** — таблицы `rooms` и `room_players`.
-8. Скопируйте URL, `anon key` и `service_role key`.
+8. Для режима «Класс» выполните [`supabase/classroom-migration.sql`](supabase/classroom-migration.sql) и в Dashboard включите **Authentication → Sign In / Providers → Anonymous sign-ins**. В **Authentication → Rate Limits** поднимите лимит анонимных входов (по умолчанию около 30 в час с одного IP, а в школе все телефоны выходят в интернет через один адрес). Миграцию и деплой кода делайте вместе: в ней меняются аргументы `room_create` и `room_join`.
+9. Realtime: нижняя часть `schema.sql` **или** Dashboard → **Database → Publications → supabase_realtime** — таблицы `rooms` и `room_players`.
+10. Скопируйте URL, `anon key` и `service_role key`.
 
 ### 2. Переменные окружения
 
@@ -76,7 +77,12 @@ CI (`.github/workflows/ci.yml`) на каждый push в `main` и в pull requ
 8. **Вызов по ссылке** — фиксированный набор вопросов, который друзья проходят когда удобно (по 30 с на вопрос,
    один раз). Сервер сам проверяет ответы и считает время; после финиша — рейтинг и сравнение по вопросам.
 9. **Карточка результата** — картинка в стиле бланка для чатов и сторис после соло, экзамена, дуэли и вызова.
-10. **Приложение на телефоне** — сайт можно установить на домашний экран (PWA); открытые ранее тесты
+10. **Класс** — «Мои тесты» → «⋯» → «Играть в классе» (или формат «Класс» при создании комнаты).
+   Вопросы показываются на проекторе, участники заходят по QR-коду или на `/play` с кодом комнаты,
+   вводят имя и отвечают с телефона; аккаунт им не нужен, до 60 человек. На экране — сколько человек
+   ответили, распределение ответов, топ-5 и пьедестал; результаты можно скачать в CSV.
+   Пробел — следующий вопрос, P — пауза автоперехода. Гостевые аккаунты и комнаты класса удаляются через сутки.
+11. **Приложение на телефоне** — сайт можно установить на домашний экран (PWA); открытые ранее тесты
    доступны для соло без сети.
 
 Справочник правильных ответов доступен только автору теста.
@@ -98,14 +104,15 @@ CI (`.github/workflows/ci.yml`) на каждый push в `main` и в pull requ
 
 Игровые действия возвращают новое состояние комнаты (`{ state }`), так что клиенту не нужен лишний запрос.
 
-- `POST /api/rooms/create` — `{ quizId, settings }`
-- `POST /api/rooms/join` — войти по коду
+- `POST /api/rooms/create` — `{ quizId, settings, mode }`, `mode`: `duel` (по умолчанию) или `classroom`
+- `POST /api/rooms/join` — `{ code, nickname }`; гость (анонимный вход) может войти только в комнату класса
+- `POST /api/rooms/kick` — `{ roomId, userId }`, убрать участника (ведущий класса)
 - `GET /api/rooms/state?roomId=` или `?code=` — состояние комнаты
 - `POST /api/game/start` — старт (только хост)
 - `POST /api/game/answer` — отправить ответ
 - `POST /api/game/timeout` — истечение таймера
 - `POST /api/game/advance` — `{ index }`, следующий вопрос (хост, после reveal)
-- `POST /api/game/end` — досрочно завершить игру (хост)
+- `POST /api/game/end` — досрочно завершить игру (хост); в классе так же закрывается лобби
 - `POST /api/rooms/leave` — выйти из комнаты
 - `POST /api/rooms/settings` — настройки лобби (хост)
 
@@ -119,4 +126,5 @@ CI (`.github/workflows/ci.yml`) на каждый push в `main` и в pull requ
 npm run dev      # Vite dev server
 npm run build    # production build → dist/
 npm run preview  # preview build
+node scripts/classroom-load.mjs 40 5   # класс на 40 гостей и 5 вопросов против базы из .env
 ```

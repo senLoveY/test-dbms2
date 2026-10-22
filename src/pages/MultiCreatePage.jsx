@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../components/Button.jsx";
 import PageLayout, { PageHeader } from "../components/PageLayout.jsx";
 import RoomSettingsForm, { DEFAULT_ROOM_SETTINGS } from "../components/RoomSettingsForm.jsx";
+import Segmented from "../components/Segmented.jsx";
 import { SkeletonLines } from "../components/Skeleton.jsx";
 import { normalizeRoomSettings } from "../../lib/roomSettings.js";
 import { apiRequest, saveRoomSession } from "../lib/api.js";
@@ -14,6 +15,8 @@ export default function MultiCreatePage() {
   const [params] = useSearchParams();
   const { quizzes, loading: quizzesLoading } = useQuizzes();
   const [quizId, setQuizId] = useState(params.get("quiz") || "");
+  const [mode, setMode] = useState(params.get("mode") === "classroom" ? "classroom" : "duel");
+  const classroom = mode === "classroom";
   const [settings, setSettings] = useState({ ...DEFAULT_ROOM_SETTINGS });
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
@@ -40,7 +43,7 @@ export default function MultiCreatePage() {
     try {
       const { room } = await apiRequest("/api/rooms/create", {
         method: "POST",
-        body: { quizId: selected.id, settings: normalizeRoomSettings(settings) },
+        body: { quizId: selected.id, settings: normalizeRoomSettings(settings), mode },
       });
       saveRoomSession(room.code, room.id);
       navigate(`/room/${room.code}`);
@@ -82,10 +85,26 @@ export default function MultiCreatePage() {
   return (
     <PageLayout>
       <PageHeader
-        eyebrow="Дуэль"
+        eyebrow={classroom ? "Класс" : "Дуэль"}
         title="Новая комната"
-        lead="Выберите тест и правила. Настройки можно поменять в лобби, пока ждёте соперника."
+        lead={
+          classroom
+            ? "Вопросы — на проекторе, ответы — с телефонов. Участникам не нужен аккаунт, до 60 человек."
+            : "Выберите тест и правила. Настройки можно поменять в лобби, пока ждёте соперника."
+        }
       />
+
+      <div className="mode-switch">
+        <Segmented
+          label="Формат"
+          value={mode}
+          options={[
+            { value: "duel", label: "Дуэль один на один" },
+            { value: "classroom", label: "Класс: экран + телефоны" },
+          ]}
+          onChange={setMode}
+        />
+      </div>
 
       <div className="create-grid">
         <section>
@@ -123,7 +142,7 @@ export default function MultiCreatePage() {
       {error && <p className="notice notice-bad">{error}</p>}
       <div className="sticky-actions">
         <Button variant="accent" size="lg" onClick={handleCreate} loading={creating} disabled={!selected}>
-          Создать комнату
+          {classroom ? "Открыть экран для класса" : "Создать комнату"}
         </Button>
       </div>
     </PageLayout>
