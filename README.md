@@ -23,8 +23,9 @@
 9. Для режима «Класс» выполните [`supabase/classroom-migration.sql`](supabase/classroom-migration.sql) и в Dashboard включите **Authentication → Sign In / Providers → Anonymous sign-ins**. В **Authentication → Rate Limits** поднимите лимит анонимных входов (по умолчанию около 30 в час с одного IP, а в школе все телефоны выходят в интернет через один адрес). Миграцию и деплой кода делайте вместе: в ней меняются аргументы `room_create` и `room_join`.
 10. Выполните [`supabase/reading-time-migration.sql`](supabase/reading-time-migration.sql) — длинным вопросам в дуэли и классе добавляется время на чтение (та же формула, что в `lib/readingTime.js`). Скрипт можно запускать повторно.
 11. Для отчётов уроков выполните [`supabase/class-reports-migration.sql`](supabase/class-reports-migration.sql) — статистика по каждому вопросу записывается при показе ответа. Скрипт можно запускать повторно.
-12. Realtime: нижняя часть `schema.sql` **или** Dashboard → **Database → Publications → supabase_realtime** — таблицы `rooms` и `room_players`.
-13. Скопируйте URL, `anon key` и `service_role key`.
+12. Выполните [`supabase/answer-lock-migration.sql`](supabase/answer-lock-migration.sql) (ответы класса не ждут друг друга) и [`supabase/realtime-push-migration.sql`](supabase/realtime-push-migration.sql) (телефоны получают вопрос и итоги раунда прямо из Realtime, без запроса к API). Скрипты можно запускать повторно.
+13. Realtime: нижняя часть `schema.sql` **или** Dashboard → **Database → Publications → supabase_realtime** — таблицы `rooms` и `room_players`.
+14. Скопируйте URL, `anon key` и `service_role key`.
 
 ### 2. Переменные окружения
 

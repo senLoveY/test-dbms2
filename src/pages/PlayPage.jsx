@@ -27,6 +27,11 @@ function JoinForm({ initialCode, notice, onJoined }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // while the student types a name, start the function that will take the join
+  useEffect(() => {
+    apiRequest("/api/rooms/warm").catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!nickname && profile?.username) setNickname(profile.username.slice(0, NICKNAME_MAX));
     // eslint-disable-next-line react-hooks/exhaustive-deps

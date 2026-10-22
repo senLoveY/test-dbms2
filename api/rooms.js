@@ -26,6 +26,13 @@ function sendState(res, result) {
 
 export default async function handler(req, res) {
   try {
+    // Warm-up from the class lobby and the join page: starts the instance (and its token
+    // check) before a class answers at once, so the first question doesn't pay a cold start.
+    if (getApiParts(req, "rooms")[0] === "warm") {
+      await getUserFromRequest(req).catch(() => {});
+      return sendJson(res, 200, { ok: true });
+    }
+
     const { user, error: authError } = await getUserFromRequest(req);
     if (authError) return unauthorized(res, authError);
     if (isGameRequest(req)) return handleGame(req, res, user);

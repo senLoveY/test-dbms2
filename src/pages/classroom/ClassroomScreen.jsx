@@ -7,6 +7,19 @@ import RoomSettingsSummary from "../../components/RoomSettingsSummary.jsx";
 import { useHotkeys } from "../../hooks/useHotkeys.js";
 import { OPTION_LETTERS, classroomJoinUrl, downloadResultsCsv } from "../../lib/classroom.js";
 import { formatQuestions, pad2, plural } from "../../lib/format.js";
+import { apiRequest } from "../../lib/api.js";
+
+/** The lobby keeps the game function warm until the start, so the first answers don't hit a cold start. */
+const WARM_INTERVAL_MS = 4 * 60 * 1000;
+
+function useWarmGameFunction() {
+  useEffect(() => {
+    const warm = () => apiRequest("/api/rooms/warm").catch(() => {});
+    warm();
+    const id = setInterval(warm, WARM_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, []);
+}
 
 /** Late answers from phones get this long to arrive before the screen closes the question. */
 const DEADLINE_GRACE_MS = 1000;
@@ -44,6 +57,7 @@ function FullscreenButton() {
 
 function ScreenLobby({ state, code, act, onExit }) {
   const { toast, confirm } = useFeedback();
+  useWarmGameFunction();
   const [starting, setStarting] = useState(false);
   const players = state.players;
   const joinUrl = classroomJoinUrl(code);

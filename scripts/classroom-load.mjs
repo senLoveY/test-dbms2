@@ -133,7 +133,16 @@ try {
   const signIns = await Promise.allSettled(
     Array.from({ length: PLAYERS }, async (_, i) => {
       const phone = client();
-      const { data, error } = await phone.auth.signInAnonymously();
+      let { data, error } = await phone.auth.signInAnonymously();
+      if (error && /rate limit/i.test(error.message)) {
+        // the per-IP guest limit is spent: play with throwaway registered accounts instead
+        const email = `classroom-test-${Date.now()}-${i}@example.invalid`;
+        const password = `pw-${crypto.randomUUID()}`;
+        const made = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { username: `pl${i}_${Date.now() % 1e5}` } });
+        if (made.error) throw made.error;
+        created.users.push(made.data.user.id);
+        ({ data, error } = await phone.auth.signInWithPassword({ email, password }));
+      }
       if (error) throw error;
       created.users.push(data.user.id);
       await rooms("join", data.session.access_token, { code: room.code, nickname: `Ученик ${i + 1}` });
@@ -148,12 +157,14 @@ try {
 
   // Realtime as the app does it: host follows players too, a phone only the room row
   const events = { host: 0, phone: 0 };
+  const pushed = [];
   const subscribe = (supabase, label, withPlayers) =>
     new Promise((resolve) => {
       let channel = supabase
         .channel(`load:${label}`)
-        .on("postgres_changes", { event: "*", schema: "public", table: "rooms", filter: `id=eq.${room.id}` }, () => {
+        .on("postgres_changes", { event: "*", schema: "public", table: "rooms", filter: `id=eq.${room.id}` }, (payload) => {
           events[label] += 1;
+          if (label === "phone") pushed.push(payload.new);
         });
       if (withPlayers) {
         channel = channel.on(
@@ -232,6 +243,12 @@ try {
   await new Promise((r) => setTimeout(r, 1500));
   console.log(`API calls: ${calls}; answer latency p50 ${percentile(answerTimings, 50).toFixed(0)} ms, p95 ${percentile(answerTimings, 95).toFixed(0)} ms`);
   console.log(`realtime events: host ${events.host}, one phone ${events.phone} (phones should see only question changes)`);
+  // what a phone needs arrives with the row (realtime-push-migration.sql), and never the answers
+  const questionRows = pushed.filter((row) => row.status === "playing" && row.public_question);
+  const revealRows = pushed.filter((row) => row.status === "revealing" && row.public_reveal?.standings?.length);
+  const leaked = pushed.some((row) => row.public_question?.question && "correct" in row.public_question.question);
+  console.log(`pushed rows: ${questionRows.length} with the question, ${revealRows.length} with standings, answers leaked: ${leaked}`);
+  if (leaked || !questionRows.length || !revealRows.length) throw new Error("room rows don't carry the public question / reveal");
   console.log("OK");
 } catch (error) {
   console.error("FAILED:", error.message);

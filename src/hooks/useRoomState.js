@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiRequest, loadRoomSession, saveRoomSession } from "../lib/api.js";
 import { supabase } from "../lib/supabase.js";
+import { applyClassroomPush } from "../../lib/classroomPush.js";
 
 /** Safety-net polling: fast while realtime is down, slow once it's connected. */
 const POLL_FALLBACK_MS = 1500;
@@ -13,6 +14,8 @@ const EVENT_DEBOUNCE_MS = 40;
  * also follows players, coalesced so a burst of answers is one request.
  */
 const CLASS_PLAYER_POLL_FALLBACK_MS = 3000;
+/** Phones get the room pushed (see applyClassroomPush); the poll only catches what Realtime can't, like a kick. */
+const CLASS_PLAYER_POLL_REALTIME_MS = 15000;
 const CLASS_HOST_DEBOUNCE_MS = 400;
 
 function subscriptionPlan(state) {
@@ -21,7 +24,13 @@ function subscriptionPlan(state) {
   }
   return state.viewer.isHost
     ? { players: true, debounceMs: CLASS_HOST_DEBOUNCE_MS, fallbackMs: POLL_FALLBACK_MS }
-    : { players: false, debounceMs: EVENT_DEBOUNCE_MS, fallbackMs: CLASS_PLAYER_POLL_FALLBACK_MS };
+    : {
+        players: false,
+        push: true,
+        debounceMs: EVENT_DEBOUNCE_MS,
+        fallbackMs: CLASS_PLAYER_POLL_FALLBACK_MS,
+        realtimeMs: CLASS_PLAYER_POLL_REALTIME_MS,
+      };
 }
 
 /**
@@ -33,6 +42,8 @@ function subscriptionPlan(state) {
 export function useRoomState(code) {
   const [roomId, setRoomId] = useState(() => loadRoomSession(code));
   const [state, setState] = useState(null);
+  const stateRef = useRef(null);
+  stateRef.current = state;
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [realtime, setRealtime] = useState(false);
@@ -58,6 +69,8 @@ export function useRoomState(code) {
         saveRoomSession(code, next.room.id);
         setRoomId(next.room.id);
       }
+      // the next push may arrive before React re-renders: build it on this state, not the last render's
+      stateRef.current = next;
       setState(next);
       setError("");
     },
@@ -110,13 +123,22 @@ export function useRoomState(code) {
   const plan = subscriptionPlan(state);
   const watchPlayers = plan.players;
   const debounceMs = plan.debounceMs;
+  const push = Boolean(plan.push);
 
   // Realtime subscription
   useEffect(() => {
     if (!roomId || !supabase) return undefined;
 
     let timer = null;
-    const onEvent = () => {
+    const onEvent = (payload) => {
+      // a phone builds its next state from the pushed room row; fetch only when that isn't enough
+      if (push && payload?.table === "rooms" && payload.new) {
+        const next = applyClassroomPush(stateRef.current, payload.new);
+        if (next) {
+          apply(++seqRef.current, next, Date.now());
+          return;
+        }
+      }
       // trailing refresh, but a steady stream of events can't postpone it forever
       if (timer) return;
       timer = setTimeout(() => {
@@ -149,13 +171,13 @@ export function useRoomState(code) {
       setRealtime(false);
       supabase.removeChannel(channel);
     };
-  }, [roomId, refresh, watchPlayers, debounceMs]);
+  }, [roomId, refresh, apply, watchPlayers, debounceMs, push]);
 
   // Polling safety net + refresh when the tab comes back
   useEffect(() => {
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") refresh();
-    }, realtime ? POLL_REALTIME_MS : plan.fallbackMs);
+    }, realtime ? plan.realtimeMs || POLL_REALTIME_MS : plan.fallbackMs);
 
     const onVisible = () => {
       if (document.visibilityState === "visible") refresh();
@@ -168,7 +190,7 @@ export function useRoomState(code) {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", onVisible);
     };
-  }, [realtime, refresh, plan.fallbackMs]);
+  }, [realtime, refresh, plan.fallbackMs, plan.realtimeMs]);
 
   const now = useCallback(() => Date.now() + clockOffsetRef.current, []);
 
