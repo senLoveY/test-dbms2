@@ -2125,6 +2125,22 @@ textarea.qcard-text {
   grid-column: 1 / -1;
 }
 
+/* as specific as the dark theme's .link-btn rule, and later, so it stays red there too */
+.editor-side .link-btn.side-delete {
+  justify-self: start;
+  color: var(--bad);
+  text-decoration-color: color-mix(in srgb, var(--bad) 40%, transparent);
+}
+
+.editor-side .link-btn.side-delete:hover {
+  text-decoration-color: var(--bad);
+}
+
+.editor-side .link-btn.side-delete:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .side-kbd {
   display: flex;
   align-items: center;

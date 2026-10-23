@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import AutoTextarea from "../components/AutoTextarea.jsx";
 import Button from "../components/Button.jsx";
 import { useFeedback } from "../components/Feedback.jsx";
@@ -12,7 +12,7 @@ import Switch from "../components/Switch.jsx";
 import { apiRequest } from "../lib/api.js";
 import { SOURCE_FILE_ACCEPT, extractFileText } from "../lib/fileText.js";
 import { formatQuestions, formatTime, plural } from "../lib/format.js";
-import { fetchQuiz, getCachedQuiz, upsertQuiz } from "../lib/quizStore.js";
+import { fetchQuiz, getCachedQuiz, removeQuiz, upsertQuiz } from "../lib/quizStore.js";
 import { downloadQuizJson } from "../lib/quizTransfer.js";
 import {
   GENERATE_LIMITS,
@@ -372,7 +372,11 @@ const NOT_OWNER = "Это чужой тест — сохраните его се
 export default function QuizEditorPage() {
   const { id } = useParams();
   const [params, setParams] = useSearchParams();
-  const { toast } = useFeedback();
+  const { toast, confirm } = useFeedback();
+  const navigate = useNavigate();
+  // once the quiz is deleted, no autosave or save-on-leave may recreate a request for it
+  const deletedRef = useRef(false);
+  const [deleting, setDeleting] = useState(false);
   const cached = getCachedQuiz(id, 15_000);
 
   const [loaded, setLoaded] = useState(Boolean(cached));
@@ -443,6 +447,7 @@ export default function QuizEditorPage() {
   const save = useCallback(
     async ({ nextStatus, keepalive = false } = {}) => {
       clearTimeout(timerRef.current);
+      if (deletedRef.current) return false;
       const data = latestRef.current;
       const targetStatus = nextStatus || data.status;
       const version = versionRef.current;
@@ -641,6 +646,29 @@ export default function QuizEditorPage() {
     if (ok) toast(next === "published" ? "Тест опубликован — можно звать на дуэль" : "Тест снят с публикации");
   }
 
+  async function deleteQuiz() {
+    const ok = await confirm({
+      title: `Удалить «${title.trim() || "Без названия"}»?`,
+      body: "Тест и история попыток будут удалены без возможности восстановления.",
+      confirmText: "Удалить",
+      tone: "danger",
+    });
+    if (!ok) return;
+    setDeleting(true);
+    deletedRef.current = true;
+    clearTimeout(timerRef.current);
+    try {
+      await apiRequest(`/api/quizzes/${id}`, { method: "DELETE" });
+      removeQuiz(id);
+      toast("Тест удалён");
+      navigate("/me/quizzes", { replace: true });
+    } catch (err) {
+      deletedRef.current = false;
+      setDeleting(false);
+      toast(err.message, { tone: "bad" });
+    }
+  }
+
   function jumpTo(key) {
     setFocusKey(null);
     requestAnimationFrame(() => setFocusKey(key));
@@ -826,6 +854,9 @@ export default function QuizEditorPage() {
             <kbd>{MOD_KEY}</kbd>
             <kbd>S</kbd> — сохранить сейчас
           </p>
+          <button type="button" className="link-btn side-delete" onClick={deleteQuiz} disabled={deleting}>
+            {deleting ? "Удаляем…" : "Удалить тест"}
+          </button>
         </aside>
       </div>
 
