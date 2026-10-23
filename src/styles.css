@@ -2125,14 +2125,18 @@ textarea.qcard-text {
   grid-column: 1 / -1;
 }
 
-/* as specific as the dark theme's .link-btn rule, and later, so it stays red there too */
+/* A plain thin underline, not the highlighter of .link-btn: a red marker under red text
+   hides the words. As specific as the dark theme's .link-btn rules, and later, to win there too. */
 .editor-side .link-btn.side-delete {
   justify-self: start;
   color: var(--bad);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
   text-decoration-color: color-mix(in srgb, var(--bad) 40%, transparent);
 }
 
 .editor-side .link-btn.side-delete:hover {
+  text-decoration-thickness: 1px;
   text-decoration-color: var(--bad);
 }
 
